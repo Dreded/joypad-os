@@ -1,19 +1,67 @@
 # Joypad OS
 
-## Switch 2 NSO GameCube fork
+## What this fork changes: native Switch 2 NSO GameCube support
 
-This fork adds native Switch 2 NSO GameCube USB output for an RP2040 Pro Micro,
-using an 8BitDo GameCube mod kit and Retro Receiver in XInput mode. Native
-GameCube recognition and gameplay have been confirmed on Switch 2. Windows
-compatibility remains unresolved; use the separate adapter mode for Dolphin.
+Use an **8BitDo GameCube controller mod kit + 8BitDo Retro Receiver for NGC**
+through an **RP2040 Pro Micro** as a native Nintendo GameCube controller on
+Switch 2. The receiver supplies USB XInput; the Pro Micro translates it into
+the NSO GameCube USB protocol. **Switch 2 recognition and NSO Super Mario
+Sunshine gameplay have been confirmed on hardware.**
 
-Menu shortcuts: **Start + Z = ZL / Suspend**, **Start + D-pad Up = Home**,
-**Start + D-pad Down = Minus**. Analog shoulder travel and final clicks remain
-independent. See the [build and testing guide](docs/SWITCH2_NSO_GAMECUBE.md).
+### Changes in this fork
 
-Based on [Joypad OS](https://github.com/joypad-ai/joypad-os), with native USB
+- Added the dedicated `joypad_usb_promicro_nso_gc` firmware target. It presents
+  as a native NSO GameCube controller (VID `057E`, PID `2073`) and boots directly
+  into this mode, without needing a mode-selection button.
+- Added native USB initialization, identity and calibration replies, pairing,
+  input reports and rumble handling, using the PicoSwitch2 protocol reference.
+- Preserved **continuous analog L/R travel and separate final digital clicks**.
+  The output does not turn trigger travel into clicks or clicks into full travel.
+- Mapped A/B/X/Y directly, Z from XInput Back, L/R clicks from LB/RB, and
+  Start from XInput Start. Sticks and D-pad keep their normal functions.
+- Added the menu shortcuts below for original GameCube controllers that lack
+  the extra NSO buttons. Each shortcut consumes its component buttons while held.
+- Retained the separate `joypad_usb_promicro` GameCube USB adapter target,
+  including button-mapping and Windows HID rumble-framing fixes for Dolphin.
+- Added protocol, mapping and transport tests, plus GitHub Actions builds for
+  both Pro Micro targets. The XInput receiver parser remains unchanged.
+
+### Native-mode menu shortcuts
+
+| Combination | Output |
+| --- | --- |
+| **Start + Z** | **ZL — Suspend Menu** |
+| **Start + D-pad Up** | **Home** |
+| **Start + D-pad Down** | **Minus (-)** |
+
+Start, Z and D-pad work normally when used separately. Analog triggers remain
+independent of these shortcuts. Existing profile overrides and the global
+shoulder-swap setting can still alter inputs before output translation; use
+passthrough settings with shoulder swap disabled for gradual trigger travel.
+
+### Build, downloads and current limits
+
+See the [build and testing guide](docs/SWITCH2_NSO_GAMECUBE.md) for dependencies,
+GP2/GP3 USB-host wiring, configuration and validation. The native build produces
+`build/joypad_usb_promicro_nso_gc.uf2`. Successful runs of the
+[fork's GameCube workflow](https://github.com/Dreded/joypad-os/actions/workflows/switch2-gamecube.yml)
+provide a `promicro-gamecube-firmware` artifact containing both UF2 files.
+The upstream releases linked below do not include this fork's native firmware.
+
+**Windows compatibility for native NSO output remains unresolved.** The native
+target is intended for Switch 2; the adapter target is retained for Dolphin.
+Menu shortcuts, explicit rumble/stop behavior and reconnect scenarios have host
+test coverage but still need individual hardware verification. Other controller
+and board combinations have not been validated by this fork.
+
+Based on [Joypad OS](https://github.com/joypad-ai/joypad-os), with Apache-2.0 USB
 protocol code adapted from [PicoSwitch2](https://github.com/notsosaelin/PicoSwitch2).
-Upstream documentation follows below.
+The pinned revision, port differences and retained license are documented
+[beside the protocol source](src/usb/usbd/modes/switch2_gc/README.md).
+
+---
+
+## Upstream Joypad OS documentation
 
 <p align="center">
   <picture>
