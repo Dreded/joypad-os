@@ -61,6 +61,10 @@ void gc_adapter_mode_handle_output(uint8_t report_id, const uint8_t* data, uint1
 static gc_adapter_in_report_t gc_adapter_report;
 static gc_adapter_out_report_t gc_adapter_rumble;
 static bool gc_adapter_rumble_available = false;
+static bool gc_adapter_origin_pending = false;
+static bool gc_adapter_init_pending = false;
+static bool gc_adapter_initialized = false;
+static uint8_t gc_adapter_init_ack = 0;
 
 // ============================================================================
 // CUSTOM CLASS DRIVER IMPLEMENTATION
@@ -69,12 +73,18 @@ static bool gc_adapter_rumble_available = false;
 static void gc_driver_init(void)
 {
     tu_memclr(&_gc_itf, sizeof(_gc_itf));
+    gc_adapter_origin_pending = false;
+    gc_adapter_init_pending = false;
+    gc_adapter_initialized = false;
 }
 
 static void gc_driver_reset(uint8_t rhport)
 {
     (void)rhport;
     tu_memclr(&_gc_itf, sizeof(_gc_itf));
+    gc_adapter_origin_pending = false;
+    gc_adapter_init_pending = false;
+    gc_adapter_initialized = false;
 }
 
 static uint16_t gc_driver_open(uint8_t rhport, tusb_desc_interface_t const* desc_itf, uint16_t max_len)
@@ -252,6 +262,9 @@ static void gc_adapter_mode_init(void)
 
     memset(&gc_adapter_rumble, 0, sizeof(gc_adapter_out_report_t));
     gc_adapter_rumble_available = false;
+    gc_adapter_origin_pending = false;
+    gc_adapter_init_pending = false;
+    gc_adapter_initialized = false;
 }
 
 static bool gc_adapter_mode_is_ready(void)
@@ -259,6 +272,43 @@ static bool gc_adapter_mode_is_ready(void)
     uint8_t const rhport = 0;
     bool ready = tud_ready() && (_gc_itf.ep_in != 0) && !usbd_edpt_busy(rhport, _gc_itf.ep_in);
     return ready;
+}
+
+static void gc_adapter_mode_build_origin(uint8_t* report)
+{
+    memset(report, 0, GC_ADAPTER_ORIGIN_SIZE);
+    report[0] = GC_ADAPTER_REPORT_ID_ORIGIN;
+    for (uint8_t port = 0; port < 4; port++) {
+        if (!(gc_adapter_report.port[port].status & GC_ADAPTER_STATUS_CONTROLLER)) continue;
+        uint8_t* axes = report + 1 + port * 6;
+        // The input pipeline already normalizes axes. Return its neutral
+        // output coordinates, never the current (possibly held) positions.
+        axes[0] = 128;
+        axes[1] = 127;  // 255 - HID neutral Y (128), as in the state report
+        axes[2] = 128;
+        axes[3] = 127;
+        // L/R origins stay zero; clicks do not synthesize trigger travel.
+    }
+}
+
+static void gc_adapter_mode_task(void)
+{
+    if ((!gc_adapter_origin_pending && !gc_adapter_init_pending) || !gc_adapter_mode_is_ready()) return;
+    if (!usbd_edpt_claim(0, _gc_itf.ep_in)) return;
+
+    // Reply to initialization before origin data if both requests are queued.
+    if (gc_adapter_init_pending) {
+        _gc_itf.epin_buf[0] = GC_ADAPTER_REPORT_ID_INITIALIZED;
+        _gc_itf.epin_buf[1] = gc_adapter_init_ack;
+        if (usbd_edpt_xfer(0, _gc_itf.ep_in, _gc_itf.epin_buf, 2)) {
+            gc_adapter_init_pending = false;
+        }
+    } else {
+        gc_adapter_mode_build_origin(_gc_itf.epin_buf);
+        if (usbd_edpt_xfer(0, _gc_itf.ep_in, _gc_itf.epin_buf, GC_ADAPTER_ORIGIN_SIZE)) {
+            gc_adapter_origin_pending = false;
+        }
+    }
 }
 
 static bool gc_adapter_mode_send_report(uint8_t player_index,
@@ -276,13 +326,13 @@ static bool gc_adapter_mode_send_report(uint8_t player_index,
     gc_adapter_report.port[port].status = GC_ADAPTER_STATUS_CONNECTED;
 
     // Map buttons
-    gc_adapter_report.port[port].a = (buttons & JP_BUTTON_B2) ? 1 : 0;
-    gc_adapter_report.port[port].b = (buttons & JP_BUTTON_B1) ? 1 : 0;
-    gc_adapter_report.port[port].x = (buttons & JP_BUTTON_B4) ? 1 : 0;
-    gc_adapter_report.port[port].y = (buttons & JP_BUTTON_B3) ? 1 : 0;
-    gc_adapter_report.port[port].z = (buttons & JP_BUTTON_R1) ? 1 : 0;
-    gc_adapter_report.port[port].l = (buttons & JP_BUTTON_L2) ? 1 : 0;
-    gc_adapter_report.port[port].r = (buttons & JP_BUTTON_R2) ? 1 : 0;
+    gc_adapter_report.port[port].a = (buttons & JP_BUTTON_B1) ? 1 : 0;
+    gc_adapter_report.port[port].b = (buttons & JP_BUTTON_B2) ? 1 : 0;
+    gc_adapter_report.port[port].x = (buttons & JP_BUTTON_B3) ? 1 : 0;
+    gc_adapter_report.port[port].y = (buttons & JP_BUTTON_B4) ? 1 : 0;
+    gc_adapter_report.port[port].z = (buttons & JP_BUTTON_S1) ? 1 : 0;
+    gc_adapter_report.port[port].l = (buttons & JP_BUTTON_L1) ? 1 : 0;
+    gc_adapter_report.port[port].r = (buttons & JP_BUTTON_R1) ? 1 : 0;
     gc_adapter_report.port[port].start = (buttons & JP_BUTTON_S2) ? 1 : 0;
     gc_adapter_report.port[port].dpad_up = (buttons & JP_BUTTON_DU) ? 1 : 0;
     gc_adapter_report.port[port].dpad_down = (buttons & JP_BUTTON_DD) ? 1 : 0;
@@ -295,14 +345,9 @@ static bool gc_adapter_mode_send_report(uint8_t player_index,
     gc_adapter_report.port[port].cstick_x = profile_out->right_x;
     gc_adapter_report.port[port].cstick_y = 255 - profile_out->right_y;
 
-    // Analog triggers
+    // Analog trigger travel is independent of digital clicks.
     gc_adapter_report.port[port].trigger_l = profile_out->l2_analog;
     gc_adapter_report.port[port].trigger_r = profile_out->r2_analog;
-
-    if (gc_adapter_report.port[port].trigger_l == 0 && (buttons & JP_BUTTON_L2))
-        gc_adapter_report.port[port].trigger_l = 0xFF;
-    if (gc_adapter_report.port[port].trigger_r == 0 && (buttons & JP_BUTTON_R2))
-        gc_adapter_report.port[port].trigger_r = 0xFF;
 
     // Send using our custom driver endpoint
     if (!usbd_edpt_claim(rhport, _gc_itf.ep_in)) {
@@ -338,7 +383,17 @@ void gc_adapter_mode_handle_output(uint8_t report_id, const uint8_t* data, uint1
     }
 
     if (report_id == GC_ADAPTER_REPORT_ID_INIT) {
-        // Init command received - adapter is now active
+        // Match WUP-028: status 1 when enabling polling, 0 if already enabled.
+        // Keep pre-init input streaming for existing HID/Dolphin compatibility.
+        gc_adapter_init_ack = gc_adapter_initialized ? 0 : 1;
+        gc_adapter_initialized = true;
+        gc_adapter_init_pending = true;
+        return;
+    }
+
+    if (report_id == GC_ADAPTER_REPORT_ID_GET_ORIGIN) {
+        // Queue the reply: IN may still be sending a normal input report.
+        gc_adapter_origin_pending = true;
         return;
     }
 
@@ -424,7 +479,7 @@ const usbd_mode_t gc_adapter_mode = {
     .get_report = NULL,
 
     .get_class_driver = gc_adapter_mode_get_class_driver,  // Custom driver!
-    .task = NULL,
+    .task = gc_adapter_mode_task,
 };
 
 #endif // CFG_TUD_GC_ADAPTER

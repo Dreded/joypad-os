@@ -30,8 +30,12 @@
 
 // Report IDs
 #define GC_ADAPTER_REPORT_ID_RUMBLE  0x11  // Rumble output command (5 bytes)
+#define GC_ADAPTER_REPORT_ID_GET_ORIGIN 0x12  // Request analog origins
 #define GC_ADAPTER_REPORT_ID_INIT    0x13  // Init command from host (1 byte)
 #define GC_ADAPTER_REPORT_ID_INPUT   0x21  // Controller input report (37 bytes)
+#define GC_ADAPTER_REPORT_ID_ORIGIN  0x22  // Analog origins (25 bytes)
+#define GC_ADAPTER_REPORT_ID_INITIALIZED 0x23  // Initialization acknowledgement
+#define GC_ADAPTER_ORIGIN_SIZE       25    // Report ID + four sets of six axes
 
 // Port status byte (bitmask)
 // Real adapter has 2 USB cables: black (data) + gray (rumble power)
@@ -128,15 +132,17 @@ static const uint8_t gc_adapter_report_descriptor[] = {
     0xA1, 0x01,        // Collection (Application)
 
     // Report ID 0x11: Rumble Output (5 bytes: report_id + 4 port rumble states)
+    // Use vendor value fields so libusb's Windows HID backend detects report IDs.
     0xA1, 0x03,        //   Collection (Report)
     0x85, 0x11,        //     Report ID (17)
-    0x19, 0x00,        //     Usage Minimum (Undefined)
-    0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
+    0x06, 0x00, 0xFF,  //     Usage Page (Vendor Defined 0xFF00)
+    0x19, 0x01,        //     Usage Minimum (Port 1)
+    0x29, 0x04,        //     Usage Maximum (Port 4)
     0x15, 0x00,        //     Logical Minimum (0)
     0x26, 0xFF, 0x00,  //     Logical Maximum (255)
     0x75, 0x08,        //     Report Size (8)
-    0x95, 0x05,        //     Report Count (5)
-    0x91, 0x00,        //     Output (Data,Array,Abs)
+    0x95, 0x04,        //     Report Count (4 port bytes; report ID is separate)
+    0x91, 0x02,        //     Output (Data,Var,Abs)
     0xC0,              //   End Collection
 
     // Report ID 0x21: Input Report (36 bytes: 4 ports × 9 bytes each)
@@ -152,16 +158,40 @@ static const uint8_t gc_adapter_report_descriptor[] = {
     0x81, 0x02,        //     Input (Data,Var,Abs)
     0xC0,              //   End Collection
 
+    // Report ID 0x12: Origin query (no payload required on the wire)
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x12,        //     Report ID (18)
+    0x09, 0x06,        //     Usage (Vendor Origin Query)
+    0x95, 0x01,        //     Report Count (1 reserved byte for HID access)
+    0x91, 0x02,        //     Output (Data,Var,Abs)
+    0xC0,              //   End Collection
+
+    // Report ID 0x22: Four origins, each [LX, LY, CX, CY, L, R]
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x22,        //     Report ID (34)
+    0x19, 0x10,        //     Usage Minimum (Vendor Origin Axis 1)
+    0x29, 0x27,        //     Usage Maximum (Vendor Origin Axis 24)
+    0x95, 0x18,        //     Report Count (24)
+    0x81, 0x02,        //     Input (Data,Var,Abs)
+    0xC0,              //   End Collection
+
     // Report ID 0x13: Init Command (1 byte: just report_id)
     0xA1, 0x03,        //   Collection (Report)
     0x85, 0x13,        //     Report ID (19)
-    0x19, 0x00,        //     Usage Minimum (Undefined)
-    0x2A, 0xFF, 0x00,  //     Usage Maximum (0xFF)
+    0x09, 0x05,        //     Usage (Vendor Init Command)
     0x15, 0x00,        //     Logical Minimum (0)
     0x26, 0xFF, 0x00,  //     Logical Maximum (255)
     0x75, 0x08,        //     Report Size (8)
     0x95, 0x01,        //     Report Count (1)
-    0x91, 0x00,        //     Output (Data,Array,Abs)
+    0x91, 0x02,        //     Output (Data,Var,Abs)
+    0xC0,              //   End Collection
+
+    // Report ID 0x23: Initialization acknowledgement (ID + status)
+    0xA1, 0x03,        //   Collection (Report)
+    0x85, 0x23,        //     Report ID (35)
+    0x09, 0x07,        //     Usage (Vendor Initialization Status)
+    0x95, 0x01,        //     Report Count (1)
+    0x81, 0x02,        //     Input (Data,Var,Abs)
     0xC0,              //   End Collection
 
     0xC0,              // End Collection
@@ -194,7 +224,8 @@ static const tusb_desc_device_t gc_adapter_device_descriptor = {
 #define GC_ADAPTER_CONFIG_TOTAL_LEN  41
 
 // Configuration descriptor - HID with IN and OUT endpoints
-// Match HOJA's endpoint addresses and sizes: EP IN 0x82 (37 bytes), EP OUT 0x01 (6 bytes)
+// Native WUP-028 endpoint addresses: EP IN 0x81, EP OUT 0x02.
+// Keep the existing endpoint capacities and polling interval for this test.
 static const uint8_t gc_adapter_config_descriptor[] = {
     // Configuration descriptor (9 bytes)
     TUD_CONFIG_DESCRIPTOR(1, 1, 0, GC_ADAPTER_CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),  // 500mA
@@ -206,10 +237,10 @@ static const uint8_t gc_adapter_config_descriptor[] = {
     9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_adapter_report_descriptor)),
 
     // Endpoint IN descriptor (7 bytes) - 37 bytes for input report
-    7, TUSB_DESC_ENDPOINT, 0x82, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 1,
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 1,
 
     // Endpoint OUT descriptor (7 bytes) - 6 bytes for rumble (matches HOJA)
-    7, TUSB_DESC_ENDPOINT, 0x01, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 1,
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 1,
 };
 
 // String descriptors
