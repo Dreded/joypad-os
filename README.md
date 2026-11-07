@@ -38,8 +38,8 @@ features may vary; other devices have not been validated by this fork.
 | Function | GameCube Mod Kit | Xbox Controller |
 |---|---|---|
 | **Plus (+)** | Start | Menu (Start) |
-| **Minus (−)** | Start + D-pad Down | Menu (Start) + D-pad Down |
-| **Home** | Start + D-pad Up | Xbox (Guide) / Menu (Start) + D-pad Up |
+| **Minus (−)** | Start + D-pad Up | Menu (Start) + D-pad Up |
+| **Home** | Start + D-pad Down | Xbox (Guide) / Menu (Start) + D-pad Down |
 | **ZL — Suspend Menu** | Start + Z | Menu (Start) + View (Back) |
 | **ZR / GameCube Z** | Z | View (Back) |
 | **Analog L / R triggers** | L / R | LT / RT |

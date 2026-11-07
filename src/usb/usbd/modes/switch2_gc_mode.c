@@ -183,11 +183,11 @@ static bool send_report(uint8_t player, const input_event_t *event,
     } else if ((buttons & (JP_BUTTON_S2 | JP_BUTTON_DU)) == (JP_BUTTON_S2 | JP_BUTTON_DU)) {
         input.buttons[1] &= ~NSOGC_MASK_PLUS;
         input.buttons[2] &= ~NSOGC_MASK_DPAD_UP;
-        input.buttons[1] |= NSOGC_MASK_HOME;
+        input.buttons[1] |= NSOGC_MASK_MINUS;
     } else if ((buttons & (JP_BUTTON_S2 | JP_BUTTON_DD)) == (JP_BUTTON_S2 | JP_BUTTON_DD)) {
         input.buttons[1] &= ~NSOGC_MASK_PLUS;
         input.buttons[2] &= ~NSOGC_MASK_DPAD_DOWN;
-        input.buttons[1] |= NSOGC_MASK_MINUS;
+        input.buttons[1] |= NSOGC_MASK_HOME;
     }
     nso_gc_pack_stick(axis12(out->left_x), axis12_y(out->left_y), input.left_stick);
     nso_gc_pack_stick(axis12(out->right_x), axis12_y(out->right_y), input.right_stick);

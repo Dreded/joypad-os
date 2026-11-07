@@ -32,7 +32,7 @@ Joypad changes:
   Each detent forces its corresponding trigger byte to 255; otherwise trigger
   travel passes through unchanged. The pure encoder still carries separate
   fields. Start+Z supplies ZL (Suspend),
-  Start+Up supplies Home, and Start+Down supplies Minus in this mode.
+  Start+Up supplies Minus, and Start+Down supplies Home in this mode.
 - Shared input model reduced and namespaced; wired unknown battery reports the
   reference external-power default. No motion, microphone, audio or BLE output.
 - Session reset clears selected report, counters, pairing key, bulk state and

@@ -49,8 +49,8 @@ before manually installing this test build. The existing build uses a Pico
 | L1 / R1 | L / R final digital clicks, also forcing corresponding travel to 100% |
 | S2 (XInput Start) | Plus / Start |
 | S1 + S2 together (Z + Start) | ZL / Suspend Menu, consuming Z and Plus while held |
-| Start + D-pad Up | Home, consuming Start and Up while held |
-| Start + D-pad Down | Minus, consuming Start and Down while held |
+| Start + D-pad Up | Minus, consuming Start and Up while held |
+| Start + D-pad Down | Home, consuming Start and Down while held |
 | A1 / A2, when available | Home / Capture |
 | Profile L2 / R2 analog | Continuous L / R travel when the corresponding final click is released |
 
@@ -103,7 +103,7 @@ the existing `MBEDTLS_CONFIG_FILE` redefinition warning remains.
 Validated on 2026-11-06: nine Python tests pass (including five C golden-vector
 suites and the full native transport harness). Final UF2: 1,342,976 bytes,
 RP2040 family, flash payload range `0x10000000..0x100A3F00`, SHA-256
-`0d5ed0c232563420c38dfa60fab6adef9e8b48e253182dd5c341556f06fd9b7a`.
+`b765a7a05920e309bb9f555ac4932a1b6c17e83fbb82c89be49e9dcf2f68996a`.
 The file does not write the earlier diagnostic log area at `0x10100000`.
 
 The user confirmed that the initial native build works on Switch 2, appears as
@@ -120,7 +120,7 @@ New menu shortcuts still require hardware testing. Regression checks:
 2. In NSO Sunshine on the same save, gradual R gives spray while moving, then
    the final R click permits stationary aiming without losing water spray.
 3. Verify released zero, partial/full L, face buttons, Z, Start, sticks and D-pad.
-4. Verify Start+Z Suspend, Start+Up Home, Start+Down Minus, rumble and rumble stop, receiver disconnect and
+4. Verify Start+Z Suspend, Start+Up Minus, Start+Down Home, rumble and rumble stop, receiver disconnect and
    reconnect, then console disconnect/reconnect and a fresh initialization.
 
 Motion/audio and Bluetooth output are outside this implementation. The protocol

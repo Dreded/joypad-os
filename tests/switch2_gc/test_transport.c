@@ -83,9 +83,9 @@ int main(void) {
     send_report(0,NULL,&p,JP_BUTTON_S1|JP_BUTTON_S2); switch_gc_task();
     assert(hid[2]==0 && hid[3]==0x20); // ZL combo consumes native Z and Start.
     send_report(0,NULL,&p,JP_BUTTON_S2|JP_BUTTON_DU); switch_gc_task();
-    assert(hid[2]==0 && hid[3]==0 && hid[4]==1); // Home consumes Start and Up.
+    assert(hid[2]==0 && hid[3]==0x40 && hid[4]==0); // Minus consumes Start and Up.
     send_report(0,NULL,&p,JP_BUTTON_S2|JP_BUTTON_DD); switch_gc_task();
-    assert(hid[2]==0 && hid[3]==0x40 && hid[4]==0); // Minus consumes Start and Down.
+    assert(hid[2]==0 && hid[3]==0 && hid[4]==1); // Home consumes Start and Down.
     send_report(0,NULL,&p,JP_BUTTON_DU|JP_BUTTON_S1); switch_gc_task();
     assert(hid[2]==0x20 && hid[3]==8 && hid[4]==0); // Unmodified Up and Z still pass through.
     assert(hid[12]==0 && hid[13]==127); // Menu combinations do not change trigger travel.
