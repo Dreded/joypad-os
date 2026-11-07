@@ -50,3 +50,8 @@ hardware/*/fab/drc-report.json
 hardware/*/fab/*.svg
 hardware/*/fab/*-3d-*.png
 .gstack/
+
+# Local firmware builds, captures, reference checkouts and loose UF2 images.
+/build/
+/*.uf2
+__pycache__/

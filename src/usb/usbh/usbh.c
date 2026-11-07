@@ -138,7 +138,7 @@ void usbh_init(void)
     #define PIO_USB_DMA_CH 0
     #endif
     pio_usb_configuration_t pio_cfg = {
-        .pin_dp = PIO_USB_DP_PIN_DEFAULT,
+        .pin_dp = PIO_USB_DP_PIN,
         .pio_tx_num = PIO_USB_PIO_NUM,
         .sm_tx = 0,
         .tx_ch = PIO_USB_DMA_CH,
