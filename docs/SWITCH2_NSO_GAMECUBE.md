@@ -46,17 +46,22 @@ before manually installing this test build. The existing build uses a Pico
 | --- | --- |
 | B1 / B2 / B3 / B4 | A / B / X / Y |
 | S1 (XInput Back) | Z |
-| L1 / R1 | L / R final digital clicks |
+| L1 / R1 | L / R final digital clicks, also forcing corresponding travel to 100% |
 | S2 (XInput Start) | Plus / Start |
 | S1 + S2 together (Z + Start) | ZL / Suspend Menu, consuming Z and Plus while held |
 | Start + D-pad Up | Home, consuming Start and Up while held |
 | Start + D-pad Down | Minus, consuming Start and Down while held |
 | A1 / A2, when available | Home / Capture |
-| Profile L2 / R2 analog | Continuous L / R travel, unchanged |
+| Profile L2 / R2 analog | Continuous L / R travel when the corresponding final click is released |
 
 Sticks use centered 12-bit Nintendo axes, with HID-to-Nintendo Y inversion.
-D-pad directions pass through. There are no trigger thresholds, L1/R1 analog
-synthesis, or L2/R2-to-detent fallbacks in this output mode. It represents one
+D-pad directions pass through. A final L/R click now forces the corresponding
+analog byte to 255, even if the controller supplies no analog travel. Releasing
+the click restores the profile's analog value immediately. Each side is handled
+separately. This intentionally replaces the earlier strictly independent travel
+mapping, at the user's request, only in native NSO mode. There are no analog
+thresholds or L2/R2-to-detent fallbacks. The legacy adapter mode is unchanged.
+It represents one
 controller. Native report 0x0A carries independent clicks and analog travel;
 the reference's PC-selected report 0x05 carries travel but has no detent slots.
 
@@ -88,7 +93,8 @@ ninja -C build joypad_usb_promicro_nso_gc joypad_usb_promicro
 
 Host checks compile the actual native protocol and transport with mocked USB
 and clock I/O, plus upstream report, identity, report-selection, rumble and AES
-golden vectors. They cover independent travel/clicks, all 256 trigger values,
+golden vectors. They cover all 256 trigger values with each click combination
+and release, analog travel without synthesized clicks,
 menu mapping, neutral/endpoints, initialization, EP0 identity, USB pairing,
 busy/failure retries, truncated commands, report selection and session reset.
 The legacy adapter descriptor/protocol tests also run. Full ARM builds pass;
@@ -97,7 +103,7 @@ the existing `MBEDTLS_CONFIG_FILE` redefinition warning remains.
 Validated on 2026-11-06: nine Python tests pass (including five C golden-vector
 suites and the full native transport harness). Final UF2: 1,342,976 bytes,
 RP2040 family, flash payload range `0x10000000..0x100A3F00`, SHA-256
-`55bda899acded523d301971cffc4bf7a16910f5d91088f05de4c3e2d1d68a490`.
+`0d5ed0c232563420c38dfa60fab6adef9e8b48e253182dd5c341556f06fd9b7a`.
 The file does not write the earlier diagnostic log area at `0x10100000`.
 
 The user confirmed that the initial native build works on Switch 2, appears as

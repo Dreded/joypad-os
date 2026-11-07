@@ -191,9 +191,10 @@ static bool send_report(uint8_t player, const input_event_t *event,
     }
     nso_gc_pack_stick(axis12(out->left_x), axis12_y(out->left_y), input.left_stick);
     nso_gc_pack_stick(axis12(out->right_x), axis12_y(out->right_y), input.right_stick);
-    // Continuous travel and final clicks stay independent. No digital fallback.
-    input.left_trigger = out->l2_analog;
-    input.right_trigger = out->r2_analog;
+    // A final click forces full travel, including for digital-only controllers.
+    // Without a click, preserve the profile's continuous analog value.
+    input.left_trigger = (buttons & JP_BUTTON_L1) ? 255 : out->l2_analog;
+    input.right_trigger = (buttons & JP_BUTTON_R1) ? 255 : out->r2_analog;
     return true; // Retained state is streamed by switch_gc_task(), even without changes.
 }
 

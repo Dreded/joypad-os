@@ -16,7 +16,9 @@ Sunshine gameplay have been confirmed on hardware.**
 - Added native USB initialization, identity and calibration replies, pairing,
   input reports and rumble handling, using the PicoSwitch2 protocol reference.
 - Preserved **continuous analog L/R travel and separate final digital clicks**.
-  The output does not turn trigger travel into clicks or clicks into full travel.
+  A final L or R click forces that shoulder's analog travel to **100%**, allowing
+  digital-only controllers to make a full press. Without a click, analog travel
+  passes through unchanged; analog travel alone never creates a digital click.
 - Mapped A/B/X/Y directly, Z from XInput Back, L/R clicks from LB/RB, and
   Start from XInput Start. Sticks and D-pad keep their normal functions.
 - Added the menu shortcuts below for original GameCube controllers that lack

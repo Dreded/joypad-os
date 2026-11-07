@@ -28,8 +28,10 @@ Joypad changes:
   busy, failed queueing and failed completion retain the original reply.
   Commands retain packet boundaries rather than sharing a byte FIFO.
 - USB-only dispatch, short-command bounds and EP0 direction/type validation.
-- Joypad profile output supplies native controls; trigger bytes are direct
-  passthrough and detents read only L1/R1. Start+Z supplies ZL (Suspend),
+- Joypad profile output supplies native controls; detents read only L1/R1.
+  Each detent forces its corresponding trigger byte to 255; otherwise trigger
+  travel passes through unchanged. The pure encoder still carries separate
+  fields. Start+Z supplies ZL (Suspend),
   Start+Up supplies Home, and Start+Down supplies Minus in this mode.
 - Shared input model reduced and namespaced; wired unknown battery reports the
   reference external-power default. No motion, microphone, audio or BLE output.

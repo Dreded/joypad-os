@@ -77,7 +77,7 @@ int main(void) {
         JP_BUTTON_L1|JP_BUTTON_R1|JP_BUTTON_DU;
     assert(send_report(0,NULL,&p,b)); switch_gc_task();
     assert(hid_id==0x0A && hid[2]==0x3F && hid[3]==0x18);
-    assert(hid[12]==0 && hid[13]==127); // Clicks do not create travel.
+    assert(hid[12]==255 && hid[13]==255); // Both final clicks force full travel.
     assert(hid[5]==0 && hid[6]==8 && hid[7]==128); // Exact stick centers.
     send_report(0,NULL,&p,JP_BUTTON_S2); switch_gc_task(); assert(hid[2]==0x40 && hid[3]==0);
     send_report(0,NULL,&p,JP_BUTTON_S1|JP_BUTTON_S2); switch_gc_task();
@@ -93,9 +93,26 @@ int main(void) {
     assert(hid[2]==0 && hid[3]==0 && hid[12]==255 && hid[13]==255);
     p.l2_analog=p.r2_analog=0; send_report(0,NULL,&p,JP_BUTTON_L2|JP_BUTTON_R2);
     switch_gc_task(); assert(hid[2]==0 && hid[3]==0 && hid[12]==0 && hid[13]==0);
+    // A digital-only controller supplies no analog data on either side.
+    send_report(0,NULL,&p,JP_BUTTON_L1); switch_gc_task();
+    assert(hid[12]==255 && hid[13]==0 && hid[3]==0x10);
+    send_report(0,NULL,&p,JP_BUTTON_R1); switch_gc_task();
+    assert(hid[12]==0 && hid[13]==255 && hid[2]==0x10);
+    send_report(0,NULL,&p,JP_BUTTON_L1|JP_BUTTON_R1); switch_gc_task();
+    assert(hid[12]==255 && hid[13]==255);
+    send_report(0,NULL,&p,0); switch_gc_task();
+    assert(hid[12]==0 && hid[13]==0 && hid[2]==0 && hid[3]==0);
     for (unsigned value=0; value<256; value++) {
         p.l2_analog=value; p.r2_analog=255-value; send_report(0,NULL,&p,0); switch_gc_task();
         assert(hid[12]==value && hid[13]==255-value);
+        send_report(0,NULL,&p,JP_BUTTON_L1); switch_gc_task();
+        assert(hid[12]==255 && hid[13]==255-value && hid[2]==0 && hid[3]==0x10);
+        send_report(0,NULL,&p,JP_BUTTON_R1); switch_gc_task();
+        assert(hid[12]==value && hid[13]==255 && hid[2]==0x10 && hid[3]==0);
+        send_report(0,NULL,&p,JP_BUTTON_L1|JP_BUTTON_R1); switch_gc_task();
+        assert(hid[12]==255 && hid[13]==255 && hid[2]==0x10 && hid[3]==0x10);
+        send_report(0,NULL,&p,0); switch_gc_task();
+        assert(hid[12]==value && hid[13]==255-value && hid[2]==0 && hid[3]==0);
         if (value) { assert(axis12(value)>=axis12(value-1)); assert(axis12_y(value)<=axis12_y(value-1)); }
     }
     assert(axis12(0)==0 && axis12(255)==4095 && axis12_y(0)==4095 && axis12_y(255)==0);
