@@ -8,6 +8,11 @@ Switch 2. The receiver supplies USB XInput; the Pro Micro translates it into
 the NSO GameCube USB protocol. **Switch 2 recognition and NSO Super Mario
 Sunshine gameplay have been confirmed on hardware.**
 
+**USB XInput support:** The native Switch 2 GameCube output is not limited to
+the 8BitDo Retro Receiver. Other USB controllers and adapters using an XInput
+protocol supported by Joypad OS should also work. Compatibility and available
+features may vary; other devices have not been validated by this fork.
+
 ### Changes in this fork
 
 - Added the dedicated `joypad_usb_promicro_nso_gc` firmware target. It presents
@@ -28,13 +33,27 @@ Sunshine gameplay have been confirmed on hardware.**
 - Added protocol, mapping and transport tests, plus GitHub Actions builds for
   both Pro Micro targets. The XInput receiver parser remains unchanged.
 
-### Native-mode menu shortcuts
+## Controller mappings
 
-| Combination | Output |
-| --- | --- |
-| **Start + Z** | **ZL — Suspend Menu** |
-| **Start + D-pad Up** | **Home** |
-| **Start + D-pad Down** | **Minus (-)** |
+| Function | GameCube Mod Kit | Xbox Controller |
+|---|---|---|
+| **Plus (+)** | Start | Menu (Start) |
+| **Minus (−)** | Start + D-pad Down | Menu (Start) + D-pad Down |
+| **Home** | Start + D-pad Up | Xbox (Guide) / Menu (Start) + D-pad Up |
+| **ZL — Suspend Menu** | Start + Z | Menu (Start) + View (Back) |
+| **ZR / GameCube Z** | Z | View (Back) |
+| **Analog L / R triggers** | L / R | LT / RT |
+| **Full analog travel + digital L / R click** | L / R full press | LB / RB |
+
+**Notes:**
+
+- Other controllers supported by the 8BitDo Retro Receiver should also work,
+  although mappings and available features may vary.
+- Because the firmware cannot identify which controller is connected through
+  the Retro Receiver, the GameCube Mod Kit shortcuts also remain active when
+  using a different controller.
+- Releasing an Xbox bumper restores the analog value from its corresponding
+  physical trigger.
 
 Start, Z and D-pad work normally when used separately. Analog triggers remain
 independent of these shortcuts. Existing profile overrides and the global
