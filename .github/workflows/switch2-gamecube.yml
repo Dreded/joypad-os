@@ -3,6 +3,17 @@ name: Native Switch 2 GameCube
 on:
   push:
     branches: [main, feat/switch2-nso-gamecube]
+    paths:
+      - 'src/**'
+      - '!src/**/*.md'
+      - 'tests/switch2_gc/**/*.c'
+      - 'tests/switch2_gc/**/*.h'
+      - 'tests/test_switch2_gc.py'
+      - 'tests/test_gc_adapter*.py'
+      - 'Makefile'
+      - 'VERSION'
+      - '.gitmodules'
+      - '.github/workflows/switch2-gamecube.yml'
   workflow_dispatch:
 
 permissions:

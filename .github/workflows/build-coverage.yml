@@ -22,8 +22,22 @@ name: Build Coverage
 
 on:
   pull_request:
+    paths:
+      - '**/Makefile'
+      - 'src/CMakeLists.txt'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/build-coverage.yml'
+      - '.github/ci-excluded-apps.txt'
+      - 'tools/check_build_coverage.py'
   push:
     branches: [main]
+    paths:
+      - '**/Makefile'
+      - 'src/CMakeLists.txt'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/build-coverage.yml'
+      - '.github/ci-excluded-apps.txt'
+      - 'tools/check_build_coverage.py'
   workflow_dispatch:
 
 jobs:
