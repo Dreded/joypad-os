@@ -157,3 +157,9 @@ usb2wifi_pico_w            # PS5 Remote Play transport experiment (remote-play-l
 usb2wifi_pico2_w           # see usb2wifi_pico_w
 hardware/24g2usb_pico2w    # KiCad PCB, not firmware: built locally via Docker KiCad 9; orderable gerbers/BOM committed pre-generated (#273)
 hardware/24g2usb_rp2350zero # see hardware/24g2usb_pico2w
+
+# Fork-specific Pro Micro targets are built and uploaded by
+# .github/workflows/switch2-gamecube.yml using CMake/Ninja and SDK TinyUSB.
+# They are intentionally outside the upstream Makefile/release matrix.
+joypad_usb_promicro        # legacy adapter UF2 built by the dedicated fork workflow
+joypad_usb_promicro_nso_gc # native NSO GC UF2 built by the dedicated fork workflow
