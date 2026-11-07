@@ -20,7 +20,7 @@ if(DEFINED ENV{JOYPAD_DEBUG})
 endif()
 
 # Experimental GBA-link USB bridge mode (forward raw joybus to a forked
-# Dolphin via a USB vendor endpoint). OFF by default â€” see
+# Dolphin via a USB vendor endpoint). OFF by default — see
 # docs/GBA_LINK_CABLE.md for the status of this experiment. Builders who
 # want to try it (with a matching Dolphin fork) can enable with:
 #   cmake -DJOYPAD_ENABLE_GBA_LINK_BRIDGE=ON ..
@@ -45,8 +45,8 @@ endif()
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" JOYPAD_VERSION)
 string(STRIP "${JOYPAD_VERSION}" JOYPAD_VERSION)
 
-# Derive USB bcdDevice (0xMMmp) from JOYPAD_VERSION so the SInput descriptor â€” and
-# thus the "dongle version" the MouthPad utility reads from bcdDevice â€” reflects
+# Derive USB bcdDevice (0xMMmp) from JOYPAD_VERSION so the SInput descriptor — and
+# thus the "dongle version" the MouthPad utility reads from bcdDevice — reflects
 # the actual firmware version instead of a hardcoded default.
 string(REPLACE "." ";" _JP_VER_PARTS "${JOYPAD_VERSION}")
 list(LENGTH _JP_VER_PARTS _JP_VER_LEN)
@@ -62,7 +62,7 @@ endif()
 # Get git commit hash. Prefer what the build environment hands us: release builds run
 # inside a container over a bind-mounted checkout, where `git rev-parse` cannot read the
 # repo, so the "unknown" fallback below won on every published release. build.yml already
-# computes the short hash and exports it (`-e GIT_COMMIT=...`) â€” Make honours it for the
+# computes the short hash and exports it (`-e GIT_COMMIT=...`) — Make honours it for the
 # artifact name, CMake never looked at it, so it never reached the firmware.
 if(DEFINED ENV{GIT_COMMIT} AND NOT "$ENV{GIT_COMMIT}" STREQUAL "")
     set(GIT_COMMIT "$ENV{GIT_COMMIT}")
@@ -306,9 +306,9 @@ set(USB_DEVICE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/libxsm3/excrypt_des.c
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/libxsm3/excrypt_parve.c
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/libxsm3/excrypt_sha.c
-    # PS4 auth flash storage â€” always compiled so PS4AUTH CDC commands are available
+    # PS4 auth flash storage — always compiled so PS4AUTH CDC commands are available
     ${CMAKE_CURRENT_SOURCE_DIR}/core/services/storage/ps4_auth_flash.c
-    # PS4 event log â€” flash-persistent debug log for auth troubleshooting
+    # PS4 event log — flash-persistent debug log for auth troubleshooting
 )
 
 # PS4 local auth sources (RSA signing via mbedTLS, optional)
@@ -421,7 +421,7 @@ set(CONTROLLER_SOURCES
 )
 
 # Common sources (core + USB host)
-# SD card sources â€” opt-in via ${SD_SOURCES} in target_sources + lib/fatfs in target_include_directories
+# SD card sources — opt-in via ${SD_SOURCES} in target_sources + lib/fatfs in target_include_directories
 set(SD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/fatfs/ff.c
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/fatfs/ffsystem.c
@@ -433,7 +433,7 @@ set(SD_SOURCES
 
 set(COMMON_SOURCES ${CORE_SOURCES} ${USB_HOST_SOURCES})
 
-# TE builds use the shared core sources â€” immediate-on-connect player
+# TE builds use the shared core sources — immediate-on-connect player
 # registration is an opt-in core feature (CONFIG_REGISTER_ON_CONNECT, see
 # hid.c / router_register_device) rather than forked router/hid copies,
 # so TE tracks core router fixes instead of freezing a snapshot (#175).
@@ -450,7 +450,7 @@ set(BTSTACK_DEFINITIONS
     # joypad_add_btstack() always adds BT_HOST_SOURCES, which contains
     # BTHID_DEVICE_SOURCES (incl. bthid_registry.c), so every BTstack target on
     # this platform is a BTHID host. bt_transport.c gates its registry call on
-    # this instead of on a weak symbol â€” see the comment there.
+    # this instead of on a weak symbol — see the comment there.
     CONFIG_BT_HOST=1
 )
 
@@ -520,7 +520,7 @@ function(joypad_add_ps4_local_auth TARGET)
     # It must be available: run 'make init' to initialize all submodules.
     if(NOT TARGET pico_mbedtls)
         message(WARNING
-            "pico_mbedtls not found â€” PS4 local auth disabled for ${TARGET}. "
+            "pico_mbedtls not found — PS4 local auth disabled for ${TARGET}. "
             "Run 'make init' to initialize pico-sdk submodules.")
         return()
     endif()
@@ -667,7 +667,7 @@ pico_generate_pio_header(joypad_ngc_rp2040zero ${CMAKE_CURRENT_LIST_DIR}/lib/joy
 
 # --- Nuon Serial Adapter ---
 # Polyface TYPE=0x04 serial device for Nuon homebrew debug logging.
-# No USB host â€” uses USB device CDC to bridge SDATA register to PC terminal.
+# No USB host — uses USB device CDC to bridge SDATA register to PC terminal.
 add_executable(joypad_nuonserial)
 target_compile_definitions(joypad_nuonserial PRIVATE
     CONFIG_NUONSERIAL=1
@@ -751,7 +751,7 @@ add_executable(joypad_dc)
 # usb2dc ARCHITECTURE lives in apps/usb2dc/usb2dc_config.h and is force-included
 # into every translation unit of these targets, so the shared Dreamcast device
 # code sees it too (not just app.c). Board targets below carry ONLY GPIO /
-# peripherals â€” never architecture flags â€” so they can't drift (a kb2040 drift
+# peripherals — never architecture flags — so they can't drift (a kb2040 drift
 # off CONFIG_DC_CORE1_TX was the root cause of the Maple-drops-on-VMU-save bug).
 set(USB2DC_FORCE_CONFIG "SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/apps/usb2dc/usb2dc_config.h")
 # kb2040: default Maple pins (GP2/GP3), no NeoPixel.
@@ -778,12 +778,12 @@ pico_generate_pio_header(joypad_dc ${CMAKE_CURRENT_LIST_DIR}/native/device/dream
 # USB4Maple-compatible pinout: GPIO 14/15 for Maple Bus
 add_executable(joypad_dc_rp2040zero)
 target_compile_definitions(joypad_dc_rp2040zero PRIVATE
-    # board GPIO / peripherals only â€” architecture is force-included below
+    # board GPIO / peripherals only — architecture is force-included below
     MAPLE_PIN1=14 MAPLE_PIN5=15   # USB4Maple-compatible Maple Bus pins
     WS2812_PIN=16                 # onboard NeoPixel (kb2040 has none)
     USE_BOOTSEL_BUTTON=1
     # SD card (SPI1: SCK=GP10 MOSI=GP11 MISO=GP12 CS=GP13) is ONLY used for VMU
-    # persistence, which is disabled for release â€” leaving it off keeps both
+    # persistence, which is disabled for release — leaving it off keeps both
     # RP2040 usb2dc builds identical except GPIO. Re-enable alongside CONFIG_VMU.
     # CONFIG_SD=1 SD_SPI_INST=1 SD_SCK_PIN=10 SD_MOSI_PIN=11 SD_MISO_PIN=12 SD_CS_PIN=13
 )
@@ -821,7 +821,7 @@ target_link_libraries(joypad_neogeo PRIVATE ${COMMON_LIBRARIES})
 joypad_target_common(joypad_neogeo)
 joypad_add_btstack(joypad_neogeo)
 
-# Neo Geo â€” Pi Pico (WS2812 PIO on GP25 drives onboard LED as on/off indicator)
+# Neo Geo — Pi Pico (WS2812 PIO on GP25 drives onboard LED as on/off indicator)
 add_executable(joypad_neogeo_pico)
 target_compile_definitions(joypad_neogeo_pico PRIVATE
     CONFIG_NEOGEO=1
@@ -841,7 +841,7 @@ target_link_libraries(joypad_neogeo_pico PRIVATE ${COMMON_LIBRARIES})
 joypad_target_common(joypad_neogeo_pico)
 joypad_add_btstack(joypad_neogeo_pico)
 
-# Neo Geo â€” RP2040-Zero (WS2812 on GP16, auto from board def)
+# Neo Geo — RP2040-Zero (WS2812 on GP16, auto from board def)
 add_executable(joypad_neogeo_rp2040zero)
 target_compile_definitions(joypad_neogeo_rp2040zero PRIVATE
     CONFIG_NEOGEO=1
@@ -895,7 +895,7 @@ target_link_libraries(joypad_neogeo_te PRIVATE ${COMMON_LIBRARIES})
 joypad_target_common(joypad_neogeo_te)
 joypad_add_btstack(joypad_neogeo_te)
 
-# NEOGEO TE â€” Pico
+# NEOGEO TE — Pico
 add_executable(joypad_neogeo_te_pico)
 target_compile_definitions(joypad_neogeo_te_pico PRIVATE
     CONFIG_NEOGEO=1
@@ -918,7 +918,7 @@ target_link_libraries(joypad_neogeo_te_pico PRIVATE ${COMMON_LIBRARIES})
 joypad_target_common(joypad_neogeo_te_pico)
 joypad_add_btstack(joypad_neogeo_te_pico)
 
-# NEOGEO TE â€” RP2040-Zero
+# NEOGEO TE — RP2040-Zero
 add_executable(joypad_neogeo_te_rp2040zero)
 target_compile_definitions(joypad_neogeo_te_rp2040zero PRIVATE
     CONFIG_NEOGEO=1
@@ -993,7 +993,7 @@ pico_generate_pio_header(joypad_n642dc ${CMAKE_CURRENT_LIST_DIR}/lib/joybus-pio/
 pico_generate_pio_header(joypad_n642dc ${CMAKE_CURRENT_LIST_DIR}/native/device/dreamcast/maple.pio)
 
 # --- GameCube to Dreamcast (KB2040) ---
-# Same PIO layout as n642dc â€” gc_host shares joybus.pio with the N64 driver,
+# Same PIO layout as n642dc — gc_host shares joybus.pio with the N64 driver,
 # so it uses PIO1 SM3 at offset 10 and leaves PIO1 SM0-2 for maple_rx.
 # Core-0 TX required for the same reason (joybus on PIO1 SM3).
 add_executable(joypad_gc2dc)
@@ -1012,7 +1012,7 @@ target_include_directories(joypad_gc2dc PUBLIC
 )
 target_link_libraries(joypad_gc2dc PRIVATE ${COMMON_LIBRARIES} hardware_dma)
 joypad_target_common(joypad_gc2dc)
-# No BTstack â€” native GC input, no USB host.
+# No BTstack — native GC input, no USB host.
 pico_generate_pio_header(joypad_gc2dc ${CMAKE_CURRENT_LIST_DIR}/lib/joybus-pio/src/joybus.pio)
 pico_generate_pio_header(joypad_gc2dc ${CMAKE_CURRENT_LIST_DIR}/native/device/dreamcast/maple.pio)
 
@@ -1173,7 +1173,7 @@ target_link_libraries(joypad_usb2usb_remapper_v7_b PRIVATE ${COMMON_LIBRARIES} h
 # CFG_TUH_BTD + BTstack/BTHID sources. usbh.c auto-inits bt_transport_usb on
 # dongle mount and pumps bt_task(); BT events route through the existing
 # USB_HOST->UART wildcard route and ship to A over the link like any controller.
-# B's larger image no longer has to fit in the relay's RAM â€” the combined UF2
+# B's larger image no longer has to fit in the relay's RAM — the combined UF2
 # stages it in A's flash and the relay streams it over SWD (see combine below).
 joypad_add_btstack(joypad_usb2usb_remapper_v7_b)
 joypad_target_common(joypad_usb2usb_remapper_v7_b)
@@ -1189,7 +1189,7 @@ target_compile_definitions(joypad_usb2usb_remapper_v7_a PRIVATE
     USE_BOOTSEL_BUTTON=1   # board's only user button grounds A's QSPI CS (BOOTSEL)
     # A hosts no USB/BT itself, but the host MCU (B) does and forwards over the
     # link. Advertise USB-host presence in CAPS so the web config (which talks to
-    # A) surfaces the USB input page instead of hiding it â€” the inputs are real,
+    # A) surfaces the USB input page instead of hiding it — the inputs are real,
     # just one hop away. Read-only (no local pins to configure).
     HOST_OVER_LINK=1
     APP_CAN_FLASH_B=1      # enables the FLASH.B CDC command (SWD-flash B from A's app)
@@ -1227,7 +1227,7 @@ pico_enable_stdio_uart(joypad_usb2usb_remapper_v7_a 1)
 # both chips. See .dev/docs/USB2USB_HIDREMAPPER_V7_PLAN.md.
 
 # The relay no longer embeds B's image (it reads it from A's XIP flash, staged
-# by combine_uf2.py) â€” so it stays a small RAM binary regardless of B's size.
+# by combine_uf2.py) — so it stays a small RAM binary regardless of B's size.
 add_executable(joypad_flash_b_side
     ${CMAKE_CURRENT_SOURCE_DIR}/swd_flash/flash_b_side.c
     ${CMAKE_CURRENT_SOURCE_DIR}/swd_flash/swd.c
@@ -1251,7 +1251,7 @@ pico_set_binary_type(joypad_flash_b_side no_flash)
 # Combine A (flash) + B's image staged in A's flash into one drag-drop UF2, in
 # "stage" mode: NO boot relay. Flashing boots A cleanly (no dark board), and A
 # then flashes B itself from the running app (auto on boot when B is stale, or
-# via the FLASH.B CDC command) â€” reliable because it runs at a stable clock with
+# via the FLASH.B CDC command) — reliable because it runs at a stable clock with
 # a working watchdog, unlike the bare-context boot relay. B needs one power-cycle
 # afterwards to boot its freshly-written image. (flash_b_side is still built for
 # the relay path / diagnostics but is intentionally not embedded here.)
@@ -1316,7 +1316,7 @@ target_compile_definitions(joypad_usb_feather_rp2040_usb_host PRIVATE
     PICO_DEFAULT_UART_TX_PIN=0
     PICO_DEFAULT_UART_RX_PIN=1
     # MCP-driven synthetic input over the same UART that carries stdio logs
-    # (UART0 on GPIO0/1, 115200 baud â€” TX/RX header pins, USB-UART bridge).
+    # (UART0 on GPIO0/1, 115200 baud — TX/RX header pins, USB-UART bridge).
     CONFIG_UART_HOST=1
     UART_HOST_PERIPHERAL=uart0
     CONFIG_UART_HOST_TX_PIN=0
@@ -1428,7 +1428,7 @@ target_compile_definitions(joypad_usb_feather_rp2040_usb_host_max3421 PRIVATE
     OLED_BUTTON_C_PIN=5
     I2C_PEER_ENABLED=1
     # MCP-driven synthetic input over the same UART that carries stdio logs
-    # (UART0 on GPIO0/1, 115200 baud â€” KB2040 USB-UART bridge).
+    # (UART0 on GPIO0/1, 115200 baud — KB2040 USB-UART bridge).
     CONFIG_UART_HOST=1
     UART_HOST_PERIPHERAL=uart0
     CONFIG_UART_HOST_TX_PIN=0
@@ -1516,9 +1516,36 @@ target_link_libraries(joypad_usb_promicro PRIVATE
 joypad_target_common(joypad_usb_promicro)
 joypad_add_btstack(joypad_usb_promicro)
 
+# Native Switch 2 NSO GameCube USB, same GP2/GP3 XInput host wiring.
+add_executable(joypad_usb_promicro_nso_gc)
+target_compile_definitions(joypad_usb_promicro_nso_gc PRIVATE
+    CONFIG_USB=1 CONFIG_PIO_USB_DP_PIN=2 PICO_DEFAULT_PIO_USB_DP_PIN=2
+    BOARD_TUH_RHPORT=1 USE_BOOTSEL_BUTTON=1 CONFIG_SWITCH2_GC=1
+    USBD_DEFAULT_MODE=USB_OUTPUT_MODE_SWITCH2_GC
+    USBD_FIXED_MODE=USB_OUTPUT_MODE_SWITCH2_GC
+)
+target_sources(joypad_usb_promicro_nso_gc PUBLIC
+    ${COMMON_SOURCES} ${USB_DEVICE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/usb2usb/app.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc_mode.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/switch_gc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/switch_gc_encode.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/switch_gc_report_select.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/switch_gc_rumble_decode.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/ns2_gc_identity.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd/modes/switch2_gc/ns2_pairing_crypto.c
+)
+target_include_directories(joypad_usb_promicro_nso_gc PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/usb2usb ${CMAKE_CURRENT_SOURCE_DIR}/usb/usbd
+)
+target_link_libraries(joypad_usb_promicro_nso_gc PRIVATE
+    ${COMMON_LIBRARIES} tinyusb_device tinyusb_pico_pio_usb)
+joypad_target_common(joypad_usb_promicro_nso_gc)
+joypad_add_btstack(joypad_usb_promicro_nso_gc)
+
 # --- USB to USB (OGX-Mini Pi Pico hardware, PIO-USB) ---
 # Matches the OGX-Mini Pico pinout: PIO-USB host D+ on GP0 (D- = GP1), status
-# LED on GP25. GP0/1 are UART0, so UART stdio is disabled here â€” leaving it on
+# LED on GP25. GP0/1 are UART0, so UART stdio is disabled here — leaving it on
 # would init UART0 on GP0/1 and collide with the PIO-USB host port. Everything
 # else is identical to usb2usb_pico (native USB = console-facing device port).
 add_executable(joypad_usb_ogxm_pico)
@@ -2046,7 +2073,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
     # --- BT+USB to USB (Pico W / Pico 2 W: PIO-USB host + CYW43 Bluetooth + USB device) ---
     # Combines USB host (PIO-USB on GP16/17) with built-in CYW43 Bluetooth.
     # No pin conflicts: PIO-USB uses GP16/17, CYW43 uses dedicated SPI pins (23/24/25/29).
-    # Does NOT use joypad_add_btstack() â€” CYW43 uses pico_btstack_* libs instead of
+    # Does NOT use joypad_add_btstack() — CYW43 uses pico_btstack_* libs instead of
     # compiled BTstack sources to avoid duplicate symbol conflicts.
     add_executable(joypad_btusb2usb)
     target_compile_definitions(joypad_btusb2usb PRIVATE
@@ -2094,9 +2121,9 @@ if (PICO_BOARD STREQUAL "pico_w" OR
     pico_enable_stdio_uart(joypad_btusb2usb 1)
 
     # --- USB to WiFi Remote Play (Pico W / Pico 2 W: PIO-USB host + CYW43 WiFi station) ---
-    # USB controllers via PIO-USB host â†’ PS Remote Play over WiFi (station mode).
+    # USB controllers via PIO-USB host → PS Remote Play over WiFi (station mode).
     # Native USB device = CDC for web-config provisioning. CYW43 in WiFi (lwip)
-    # mode, NOT Bluetooth â€” so no BTstack. Session engine is stubbed (staged
+    # mode, NOT Bluetooth — so no BTstack. Session engine is stubbed (staged
     # chiaki port; needs a Pico 2 W for RAM). Same PIO0/CYW43-PIO1 coexistence as
     # btusb2usb. See .dev/docs/ps5-remoteplay-output.md.
     # On-device PS5 pairing needs chiaki's rpcrypt (AGPL, vendored under src/lib/
@@ -2109,7 +2136,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/rp_regist.c
             ${CHIAKI_RPCRYPT}
             # session-engine crypto: reuse chiaki's gkcrypt.c byte-exact (init with
-            # key_buf_chunks=0 â†’ no worker thread). ecdh is reimplemented (chiaki's
+            # key_buf_chunks=0 → no worker thread). ecdh is reimplemented (chiaki's
             # mbedtls path uses an old ECDH struct API pico's mbedtls dropped).
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/chiaki/src/gkcrypt.c
             # pure serialization reused byte-exact (controller state, launch spec, base64)
@@ -2121,12 +2148,12 @@ if (PICO_BOARD STREQUAL "pico_w" OR
             # the poll-mode streaming session engine + protobuf codec
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/rp_proto.c
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/rp_session_stream.c)
-        message(STATUS "usb2wifi: chiaki vendored â€” PS5 pairing + streaming engine enabled")
+        message(STATUS "usb2wifi: chiaki vendored — PS5 pairing + streaming engine enabled")
     else()
         set(RP_REGIST_SOURCES
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/rp_regist_stub.c
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/rp_session_stub.c)
-        message(STATUS "usb2wifi: chiaki not vendored â€” PS5 pairing + streaming stubbed")
+        message(STATUS "usb2wifi: chiaki not vendored — PS5 pairing + streaming stubbed")
     endif()
 
     add_executable(joypad_usb2wifi)
@@ -2156,7 +2183,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         target_include_directories(joypad_usb2wifi PUBLIC
             # compat shims FIRST: satisfy chiaki's <sys/socket.h>/<arpa/inet.h>/
             # <netdb.h> includes with minimal bare-metal stubs (types + byte order;
-            # never linked â€” we reimplement the socket paths on raw lwip)
+            # never linked — we reimplement the socket paths on raw lwip)
             ${CMAKE_CURRENT_SOURCE_DIR}/net/remoteplay/chiaki_compat
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/chiaki/include)
         target_compile_definitions(joypad_usb2wifi PRIVATE
@@ -2187,7 +2214,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
     pico_enable_stdio_uart(joypad_usb2wifi 1)
 
     # --- USB to BLE (Pico W / Pico 2 W: PIO-USB host + CYW43 BLE peripheral output) ---
-    # USB controllers via PIO-USB host â†’ BLE gamepad output via HOGP peripheral.
+    # USB controllers via PIO-USB host → BLE gamepad output via HOGP peripheral.
     # Uses CYW43 Bluetooth for BLE advertising + GATT server (hids_device).
     # Same PIO/DMA resource management as btusb2usb.
     add_executable(joypad_usb2ble)
@@ -2228,7 +2255,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         ${CMAKE_CURRENT_SOURCE_DIR}/bt/ble_output
         ${BTSTACK_INCLUDES}
     )
-    # Xbox BLE GATT database â€” compiled as a separate library to avoid
+    # Xbox BLE GATT database — compiled as a separate library to avoid
     # profile_data symbol collision with the standard composite GATT.
     add_library(usb2ble_xbox_gatt OBJECT
         ${CMAKE_CURRENT_SOURCE_DIR}/bt/ble_output/ble_xbox_gatt_db.c
@@ -2255,7 +2282,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
 
     # --- ControllerBTUSB (Pico W / Pico 2 W: JoyWing sensor + BLE peripheral + USB) ---
     # Full-featured universal controller on Pico W:
-    #   GPIO pad + JoyWing â†’ BLE + USB device output
+    #   GPIO pad + JoyWing → BLE + USB device output
     #   BT Central (CYW43) for BT controller input
     #   PIO-USB host for USB controller input (D+ pin configurable via web config)
     add_executable(joypad_universal)
@@ -2265,7 +2292,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         CONFIG_PAD_INPUT=1
         # RP2040 RAM squeeze (usb2dc pattern, see usb2dc_config.h): this build
         # carries CYW43 + BTstack + PIO-USB host and sits at the edge of the
-        # 264KB budget â€” the shared-core growth from #270 tipped it over.
+        # 264KB budget — the shared-core growth from #270 tipped it over.
         # A controller's single passthrough USB port doesn't need cascaded
         # hubs or 10 devices; the dev_addr-indexed arrays (hid_devices,
         # _xinputh_dev, per-driver prev_report) scale with these.
@@ -2280,12 +2307,12 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         REQUIRE_BLE_OUTPUT=1
         REQUIRE_BT_INPUT=1
         # Bluetooth Classic output modes (e.g. Switch Pro Controller emulation).
-        # Only the CYW43 radio supports BR/EDR â€” ESP32-S3 / nRF52840 builds are
+        # Only the CYW43 radio supports BR/EDR — ESP32-S3 / nRF52840 builds are
         # BLE-only and must NOT define this, so those modes are hidden + rejected
         # by the mode-list/select plumbing (see ble_output_mode_available()).
         CONFIG_BT_CLASSIC_OUTPUT=1
         # Native Switch 2 Pro Controller over BLE. Needs the radio to hold the
-        # console's 5 ms connection interval â€” unverified on CYW43, see
+        # console's 5 ms connection interval — unverified on CYW43, see
         # .dev/docs/switch2-ble-output-plan.md.
         CONFIG_SWITCH2_BLE_OUTPUT=1
         # Each BLE output mode advertises from its own permanent address, so hosts
@@ -2299,8 +2326,8 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         BOARD_TUH_RHPORT=1
 
         # Optional: 4-LED player indicator on raw GPIOs (PS3/Switch-style).
-        # Define all four pins to enable. Active-high. LED1â†”bit0, LED2â†”bit1,
-        # LED3â†”bit2, LED4â†”bit3 of the PLAYER_LEDS[] bitmap. Player 1 lights
+        # Define all four pins to enable. Active-high. LED1↔bit0, LED2↔bit1,
+        # LED3↔bit2, LED4↔bit3 of the PLAYER_LEDS[] bitmap. Player 1 lights
         # LED1 alone, P5..P10 use the standard combo patterns. See
         # .dev/docs/player_leds_gpio.md for wiring/usage.
         # PLAYER_LED_PIN_1=10
@@ -2357,7 +2384,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
         ${CMAKE_CURRENT_SOURCE_DIR}/bt/ble_output
         ${BTSTACK_INCLUDES}
     )
-    # Xbox BLE GATT database â€” separate library to avoid profile_data collision
+    # Xbox BLE GATT database — separate library to avoid profile_data collision
     add_library(universal_xbox_gatt OBJECT
         ${CMAKE_CURRENT_SOURCE_DIR}/bt/ble_output/ble_xbox_gatt_db.c
     )
@@ -2437,7 +2464,7 @@ if (PICO_BOARD STREQUAL "pico_w" OR
 endif()
 
 # --- Controller for ABB (RP2040 Advanced Breakout Board - Passthrough) ---
-# ABB is a plain RP2040 with no BT antenna â€” USB device output only, no BLE.
+# ABB is a plain RP2040 with no BT antenna — USB device output only, no BLE.
 # USB host via PIO-USB on GPIO 23/24 (USB-A passthrough port, slider in USB position).
 add_executable(joypad_universal_rp2040_abb)
 target_compile_definitions(joypad_universal_rp2040_abb PRIVATE
@@ -2570,7 +2597,7 @@ joypad_target_common(joypad_universal_alpakka)
 # --- Controller BTUSB: Waveshare RP2040-Zero (hand-wired pad, no donor shell) ---
 # The generic hand-wired build for a board with no radio.
 #
-# Deliberately defines NO PAD_CONFIG_* â€” so app.c leaves `pad_cfg` NULL on a
+# Deliberately defines NO PAD_CONFIG_* — so app.c leaves `pad_cfg` NULL on a
 # board with empty flash and the pin map comes entirely from
 # pad_config_load_runtime(), i.e. PAD.CONFIG.SET over CDC from
 # config.joypad.ai. Same behaviour as universal_pico_w, minus the CYW43
@@ -2579,7 +2606,7 @@ joypad_target_common(joypad_universal_alpakka)
 #
 # Consequence worth knowing: with nothing written to flash yet, no GPIO button
 # does anything. That is the existing design for the generic targets, not new
-# here â€” configure the pins in the browser once and it persists.
+# here — configure the pins in the browser once and it persists.
 add_executable(joypad_universal_rp2040zero)
 target_compile_definitions(joypad_universal_rp2040zero PRIVATE
     CONFIG_UNIVERSAL=1 CONFIG_USB=1 CONFIG_PAD_INPUT=1
@@ -2653,7 +2680,7 @@ target_link_libraries(joypad_psx2usb PRIVATE pico_stdlib pico_multicore hardware
 pico_generate_pio_header(joypad_psx2usb ${CMAKE_CURRENT_SOURCE_DIR}/native/host/psx/psx.pio)
 joypad_target_common(joypad_psx2usb)
 
-# --- WII2N64 (Wii extension -> N64) â€” Pi Pico target ---
+# --- WII2N64 (Wii extension -> N64) — Pi Pico target ---
 # Pico has no NeoPixel or STEMMA QT. I2C0 on GP4/GP5, N64 data on GP2.
 add_executable(joypad_wii2n64)
 target_compile_definitions(joypad_wii2n64 PRIVATE
@@ -2801,7 +2828,7 @@ pico_generate_pio_header(joypad_gc2usb ${CMAKE_CURRENT_LIST_DIR}/lib/joybus-pio/
 
 # --- GC2USB (GameCube -> USB HID, RP2040-Zero) ---
 # Note: this target is currently NOT what `make gc2usb_rp2040zero` actually
-# builds â€” that uses joypad_gc2usb (GP29) with the rp2040zero board script.
+# builds — that uses joypad_gc2usb (GP29) with the rp2040zero board script.
 # Keeping GC_PIN_DATA=29 here so that any future Makefile rewire (or anyone
 # building this target directly) matches the wiring shipped to existing
 # customers since v2.0.0.
@@ -2855,7 +2882,7 @@ pico_generate_pio_header(joypad_gc2usb_pico ${CMAKE_CURRENT_LIST_DIR}/lib/joybus
 
 # --- GC2ETH (GameCube/GBA -> Dolphin TCP via CH9120 Ethernet) ---
 # Waveshare RP2040-ETH (CH9120 UART-to-Ethernet variant). Joybus on
-# GP2, CH9120 on GP17-21. M1 = skeleton/heartbeat only â€” see
+# GP2, CH9120 on GP17-21. M1 = skeleton/heartbeat only — see
 # .dev/docs/gc2eth-ch9120-bridge.md for the full plan.
 add_executable(joypad_gc2eth)
 target_compile_definitions(joypad_gc2eth PRIVATE
@@ -2891,9 +2918,9 @@ pico_enable_stdio_uart(joypad_gc2eth 1)   # USB-CDC breaks CH9120; debug via UAR
 
 # --- GC2ETH_FEATHER (GameCube/GBA -> Dolphin TCP via W5500) ---
 # Adafruit Feather RP2040 USB Host + W5500 Ethernet FeatherWing.
-# W5500 SPI tops out at ~50Âµs RTT (vs CH9120's 30ms), so Madden's
+# W5500 SPI tops out at ~50µs RTT (vs CH9120's 30ms), so Madden's
 # multiboot timing budget actually fits. Same intercept-replay code as
-# gc2eth â€” only the transport driver changes.
+# gc2eth — only the transport driver changes.
 add_executable(joypad_gc2eth_feather)
 target_compile_definitions(joypad_gc2eth_feather PRIVATE
     CONFIG_GC2ETH_FEATHER=1 CONFIG_USB=1 CONFIG_JOYBUS_BRIDGE=1 DISABLE_USB_HOST=1
@@ -2922,7 +2949,7 @@ pico_enable_stdio_usb(joypad_gc2eth_feather 1)   # CDC over USB-C for debug + re
 
 # --- GC2USB_FEATHER_USBHOST (joybus-PIO sanity test on the same hardware) ---
 # Hardware-identical sibling of gc2eth_feather, minus the W5500. Same
-# board, same GP4 wiring â€” but acts as a USB HID gamepad. Lets us
+# board, same GP4 wiring — but acts as a USB HID gamepad. Lets us
 # isolate "joybus + GP4 wiring works" from "TCP path works." Plug a
 # real GameCube controller into the cable's GC-end and you should see
 # a HID device on the Mac.
@@ -2966,7 +2993,7 @@ target_include_directories(joypad_neogeo2usb PUBLIC
 target_link_libraries(joypad_neogeo2usb PRIVATE pico_stdlib pico_multicore hardware_pio pico_rand tinyusb_device tinyusb_board)
 joypad_target_common(joypad_neogeo2usb)
 
-# NEGEO2USB â€” RP2040-Zero (WS2812 on GP16, auto from board def)
+# NEGEO2USB — RP2040-Zero (WS2812 on GP16, auto from board def)
 add_executable(joypad_neogeo2usb_rp2040zero)
 target_compile_definitions(joypad_neogeo2usb_rp2040zero PRIVATE
     CONFIG_NEOGEO2USB=1
@@ -2987,7 +3014,7 @@ target_include_directories(joypad_neogeo2usb_rp2040zero PUBLIC
 target_link_libraries(joypad_neogeo2usb_rp2040zero PRIVATE pico_stdlib pico_multicore hardware_pio pico_rand tinyusb_device tinyusb_board)
 joypad_target_common(joypad_neogeo2usb_rp2040zero)
 
-# JVS2USB â€” RP2040-Zero (WS2812 on GP16, auto from board def)
+# JVS2USB — RP2040-Zero (WS2812 on GP16, auto from board def)
 add_executable(joypad_jvs2usb_rp2040zero)
 target_compile_definitions(joypad_jvs2usb_rp2040zero PRIVATE
     CONFIG_JVS2USB=1
@@ -3248,7 +3275,7 @@ target_link_libraries(joypad_controller_macropad PRIVATE ${CONTROLLER_LIBRARIES}
 joypad_target_common(joypad_controller_macropad)
 
 # --- ControllerBTUSB (Feather RP2040, USB-only, JoyWing + OLED + Joy) ---
-# No BLE on Feather RP2040 â€” USB device output only.
+# No BLE on Feather RP2040 — USB device output only.
 # JoyWing + OLED share I2C1 on STEMMA QT (SDA=2, SCL=3).
 add_executable(joypad_universal_feather_rp2040)
 target_compile_definitions(joypad_universal_feather_rp2040 PRIVATE
@@ -3295,7 +3322,7 @@ pico_enable_stdio_uart(joypad_universal_feather_rp2040 1)
 # Feather RP2040 USB Host (#5723) variant of universal. Same JoyWing +
 # OLED FeatherWing wiring on STEMMA QT (I2C1 = GP2/3). The onboard PIO USB
 # host port (DP=GP16, DM=GP17, VBUSEN=GP18) accepts USB HID/X-input
-# controllers as additional input â€” they merge with JoyWing/pad input into
+# controllers as additional input — they merge with JoyWing/pad input into
 # the same composite USB device output. CONFIG_UART_HOST lets joypad-mcp
 # drive synthetic input over the TX/RX header.
 add_executable(joypad_universal_feather_rp2040_usb_host)
@@ -3312,7 +3339,7 @@ target_compile_definitions(joypad_universal_feather_rp2040_usb_host PRIVATE
     PICO_DEFAULT_UART=0
     PICO_DEFAULT_UART_TX_PIN=0
     PICO_DEFAULT_UART_RX_PIN=1
-    # PIO USB host â€” onboard host port. D+ is GP16 (D- implicitly GP17,
+    # PIO USB host — onboard host port. D+ is GP16 (D- implicitly GP17,
     # PIO-USB always uses DP+1). VBUS load switch on GP18, active high.
     # Native USB peripheral is RHPort 0 (we use it as the device output);
     # PIO USB takes RHPort 1 for host.
@@ -3322,7 +3349,7 @@ target_compile_definitions(joypad_universal_feather_rp2040_usb_host PRIVATE
     BOARD_TUH_RHPORT=1
     USBR_CDC_DEBUG=1
     # PIO assignment on this board (no CYW43): pico-pio-usb on PIO1, NeoPixel
-    # on PIO0 (its default). Do NOT define CONFIG_NEOPIXEL_USE_PIO1 here â€” it
+    # on PIO0 (its default). Do NOT define CONFIG_NEOPIXEL_USE_PIO1 here — it
     # would put NeoPixel on the same PIO as PIO-USB and break enumeration
     # (PIO instruction memory + state machine collisions).
     # OLED FeatherWing 128x64 (SH1107) over I2C on STEMMA QT
@@ -3334,7 +3361,7 @@ target_compile_definitions(joypad_universal_feather_rp2040_usb_host PRIVATE
     OLED_BUTTON_B_PIN=8
     OLED_BUTTON_C_PIN=7
     # MCP-driven synthetic input over the same UART that carries stdio logs
-    # (UART0 on GPIO0/1, 115200 baud â€” TX/RX header pins, USB-UART bridge).
+    # (UART0 on GPIO0/1, 115200 baud — TX/RX header pins, USB-UART bridge).
     CONFIG_UART_HOST=1
     UART_HOST_PERIPHERAL=uart0
     CONFIG_UART_HOST_TX_PIN=0
@@ -3451,16 +3478,16 @@ endif()
 # PS4 (DS4) local RSA authentication is a property of USB *output*, not of BT or
 # any single app. Every target that presents a USB gamepad compiles the PS4
 # output mode (ps4_mode.c, part of USB_DEVICE_SOURCES); console-output-only apps
-# (usb2dc, usb2gc, usb2pce, â€¦) do not, so they never link mbedTLS.
+# (usb2dc, usb2gc, usb2pce, …) do not, so they never link mbedTLS.
 #
 # Rather than wire each of the ~55 USB-output targets by hand (and risk new apps
 # silently missing PS4 auth), attach the signing code + mbedTLS here, after all
 # targets are defined, to any executable whose sources include ps4_mode.c. This
-# is the single call site for joypad_add_ps4_local_auth() â€” the function is not
+# is the single call site for joypad_add_ps4_local_auth() — the function is not
 # idempotent (it appends sources), so it must be invoked exactly once per target.
 #
 # Activation stays runtime-gated: local auth only engages once key material is
-# uploaded via PS4AUTH.SET (web config). No keys installed â†’ passthrough / normal.
+# uploaded via PS4AUTH.SET (web config). No keys installed → passthrough / normal.
 get_property(_joypad_all_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(_t IN LISTS _joypad_all_targets)
     get_target_property(_t_type ${_t} TYPE)
@@ -3473,18 +3500,18 @@ foreach(_t IN LISTS _joypad_all_targets)
 endforeach()
 
 # ----------------------------------------------------------------------------
-# USB-output fast clock (200 MHz) â€” GP2040-CE-style board clock policy.
+# USB-output fast clock (200 MHz) — GP2040-CE-style board clock policy.
 #
 # PS4 local-auth RSA signing must land inside the console's challenge window;
 # at the stock 125 MHz a sign takes ~3.4 s, risking the timeout. GP2040-CE
 # raises the whole board to the fastest build-supported clock (200 MHz), which
-# brings signing to ~1.7 s. We do the same â€” but as a build-time / early-boot
+# brings signing to ~1.7 s. We do the same — but as a build-time / early-boot
 # board policy (set once in usbd_init() before the USB stack starts, NOT a
 # per-driver runtime hack), and only for the wired controller-emulation
 # USB-output apps.
 #
 # Deliberately EXCLUDED (each keeps its own tuned clock):
-#   - native-input apps (snes2usb/n642usb/gc2usb/lodgenet2usb/â€¦): timing-
+#   - native-input apps (snes2usb/n642usb/gc2usb/lodgenet2usb/…): timing-
 #     critical PIO input is tuned around their clock.
 #   - CYW43 wireless variants (usb_pico_w/pico2_w/bt2usb): BT + SPI-PIO timing
 #     needs separate validation before raising the clock.

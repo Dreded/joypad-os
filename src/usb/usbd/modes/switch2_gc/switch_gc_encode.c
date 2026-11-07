@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: Apache-2.0
+// Adapted from PicoSwitch2 e054bfd1311289f392069ff0d2447e01748c2124.
+// See README.md and LICENSE.PicoSwitch2 in this directory.
+#include <string.h>
+
+// Reference battery encoding; unknown telemetry uses the wired/external default.
+static unsigned char controller_battery_switch2_power_info(int valid, int level, int charging) {
+    if (!valid) return 0x25;
+    unsigned clamped = level > 100 ? 100 : (unsigned)level;
+    unsigned bucket = (clamped * 9 + 50) / 100;
+    return (unsigned char)(1 | (charging ? 2 : 0) | (bucket << 2));
+}
+#include "switch_gc_encode.h"
+
+// Right Stick/Left Stick click bits (byte 0x2/0x3, bit 0x80) are hardcoded to 0 always and
+// must never read NSOGC_MASK_L3/R3 -- per NSO-GC.md's explicit physical correction, the
+// genuine NSO GameCube Controller has no L3/R3 hardware; docs/switch2-gc/mapping.md: "the
+// output personality must never expose L3/R3 destinations."
+void switch_gc_encode_report(const nso_gc_input_t *in, uint8_t counter, uint8_t out[63]) {
+    memset(out, 0, 63);
+    out[0x0] = counter;
+    out[0x1] = controller_battery_switch2_power_info(
+        in->battery_valid != 0, in->battery_level,
+        in->battery_charging != 0);
+
+    uint8_t s0 = in->buttons[0], s1 = in->buttons[1], s2 = in->buttons[2];
+    uint8_t b0 = 0, b1 = 0, b2 = 0;
+    // Z/L-detent/R-detent/ZL bit positions: Corrected 2026-07-13 by direct hardware evidence on
+    // a real Switch 2 console's Test Input screen -- this superseded ndeadly's documented table,
+    // which this originally followed byte-for-byte. With the original (ndeadly-table) encoding, a
+    // live console displayed: Z (was byte0 0x10) as "L", R-detent (was byte0 0x20) as "ZR",
+    // L-detent (was byte1 0x20) as "ZL" -- a clean 4-way rotation across all four slots (the
+    // untested ZL bit, by elimination, must have displayed as "R"). A first fix applied the
+    // inverse rotation; a second real-console re-test confirmed Z and ZL now show correctly but
+    // found L/R detent still swapped with each other -- fixed here by swapping just that pair
+    // (Z and ZL slots are unchanged, confirmed correct). Treat ndeadly's table as wrong for this
+    // nibble until independently re-verified.
+    //
+    // Byte 0: 0x80 Right Stick (N/A, never set -- no L3/R3 on genuine hardware) | 0x40 Plus |
+    //         0x20 Z | 0x10 R detent | 0x08 X | 0x04 Y | 0x02 A | 0x01 B
+    if (s0 & NSOGC_MASK_A) b0 |= 0x02;
+    if (s0 & NSOGC_MASK_B) b0 |= 0x01;
+    if (s0 & NSOGC_MASK_X) b0 |= 0x08;
+    if (s0 & NSOGC_MASK_Y) b0 |= 0x04;
+    if (s1 & NSOGC_MASK_PLUS) b0 |= 0x40;
+    if (in->gc_extra & NSOGC_NATIVE_R_DETENT) b0 |= 0x10;
+    if (in->gc_extra & NSOGC_NATIVE_Z) b0 |= 0x20;
+    // Byte 1: 0x80 Left Stick (N/A, never set) | 0x40 Minus | 0x20 ZL |
+    //         0x10 L detent | 0x08 Up | 0x04 Left | 0x02 Right | 0x01 Down
+    if (s1 & NSOGC_MASK_MINUS) b1 |= 0x40;
+    if (in->gc_extra & NSOGC_NATIVE_L_DETENT) b1 |= 0x10;
+    if ((s2 & NSOGC_MASK_ZL) || (in->gc_extra & NSOGC_NATIVE_ZL)) b1 |= 0x20;
+    if (s2 & NSOGC_MASK_DPAD_UP) b1 |= 0x08;
+    if (s2 & NSOGC_MASK_DPAD_LEFT) b1 |= 0x04;
+    if (s2 & NSOGC_MASK_DPAD_RIGHT) b1 |= 0x02;
+    if (s2 & NSOGC_MASK_DPAD_DOWN) b1 |= 0x01;
+    // Byte 2: 0x10 C | 0x02 Capture | 0x01 Home
+    if (in->extra & NSOGC_EXTRA_C) b2 |= 0x10;
+    if (s1 & NSOGC_MASK_CAPTURE) b2 |= 0x02;
+    if (s1 & NSOGC_MASK_HOME) b2 |= 0x01;
+    out[0x2] = b0;
+    out[0x3] = b1;
+    out[0x4] = b2;
+
+    // Sticks arrive packed as two 12-bit values in 3 bytes, the shared Switch 2 report convention.
+    memcpy(&out[0x5], in->left_stick, 3);
+    memcpy(&out[0x8], in->right_stick, 3);
+
+    out[0xB] = 0x30;  // Retained reference feature/status byte.
+    out[0xC] = in->left_trigger;   // continuous, never thresholded/collapsed -- raw passthrough
+    out[0xD] = in->right_trigger;
+    out[0xE] = 0;     // Motion Data Length -- 0 (no motion source for GC yet; matches one of
+                      // ndeadly's documented observed values {0, 30, 40})
+    // 0xF..0x36 motion data, 0x37..0x3E reserved: left zeroed by the memset above.
+}
+
+// Report 0x05 -- Confirmed 2026-07-13 by direct hardware evidence to be REQUIRED, not optional:
+// a live USBPcap capture of Steam initializing this project's own Pico (GameCube personality)
+// found Steam selects report ID 0x05 exclusively, never 0x0A -- see
+// docs/switch2-gc/protocol.md "Input Report 0x05" and the capture evidence cited in
+// docs/experiments/nso-gc-usb-capture-decode-2026-07-13.md. Report 0x0A remains implemented for
+// the real Switch 2 console path; 0x05 is what PC/Steam hosts use for every Switch-family
+// controller, GC included -- exactly like
+// switch_pro2.c's own ns2_build_report_05() already does for Pro Controller 2.
+//
+// Deliberately a SEPARATE, independent encoder rather than calling into switch_pro2.c's static
+// ns2_build_report_05() -- that function is private to the Pro2 module and carries Pro2-only
+// assumptions (its own counter, its own motion block) that would couple this personality to
+// Pro2's internal state. The bit LAYOUT is genuinely common (per protocol.md, "common framing
+// across controller types") and is intentionally duplicated here, not shared code -- see that
+// function for the byte-for-byte-identical button bit assignments this mirrors.
+//
+// GameCube Z IS the ZR control (byte0 0x80). The shell prints "Z"; the protocol slot is ZR, and
+// both hosts agree on that: a real Switch 2's Test Input screen names this control "ZR" (the same
+// screen whose evidence fixed report 0x0A's nibble above, and see docs/switch2-gc/mapping.md),
+// and a genuine NSO GameCube Controller's Z is recognized by Windows/Steam -- which it could only
+// be if the genuine unit sets this bit, since report 0x05 is the only report a PC host ever
+// selects.
+//
+// An earlier version of this function hardcoded ZR to 0, reasoning that GC's Z had "no
+// representable bit position in this shared format". That was an assumption, it was wrong, and it
+// was the whole reason this personality's Z worked on a Switch 2 and did nothing at all on
+// PC/Steam: report 0x0A carries Z in its own GC slot, report 0x05 carried nothing. It also left
+// this format lopsided -- ZL below was always emitted -- which is the same asymmetry
+// ns2_seam.c's generic GC-mode block already had to work around in its own comment
+// ("NSOGC_MASK_ZL has a live bit in the GC encoder, NSOGC_MASK_ZR does not").
+//
+// Sourced from gc_extra ONLY, exactly as report 0x0A sources it, so the two reports carry
+// identical semantics and no path can make a PC see a press the console does not.
+//
+// Bits with no real GC hardware are hardcoded to 0, never read from the shared struct:
+//   - plain L/R shoulder (byte0 0x40, byte2 0x40): Pro2-only concepts; GC has no plain shoulder
+//     bit at all. The independent L/R trigger DETENTS are a different control from Z and do
+//     genuinely have no slot in this format -- only report 0x0A can carry them, while the
+//     continuous analog values reach a PC through the GC-specific tail at 0x3C/0x3D instead.
+//   - L3/R3 (byte1 0x08/0x04) and GL/GR (byte3 0x02/0x01): genuine NSO GameCube Controller has
+//     none of these -- same rule as switch_gc_encode_report()'s stick-click bits.
+void switch_gc_encode_report05(const nso_gc_input_t *in, uint32_t counter, uint8_t out[63]) {
+    memset(out, 0, 63);
+    out[0] = (uint8_t)counter;
+    out[1] = (uint8_t)(counter >> 8);
+    out[2] = (uint8_t)(counter >> 16);
+    out[3] = (uint8_t)(counter >> 24);
+
+    uint8_t s0 = in->buttons[0], s1 = in->buttons[1], s2 = in->buttons[2];
+    uint8_t b0 = 0, b1 = 0, b2 = 0;
+    if (in->gc_extra & NSOGC_NATIVE_Z) b0 |= 0x80;  // GC Z occupies the ZR slot; see the note above.
+    if (s0 & NSOGC_MASK_A) b0 |= 0x08;
+    if (s0 & NSOGC_MASK_B) b0 |= 0x04;
+    if (s0 & NSOGC_MASK_X) b0 |= 0x02;
+    if (s0 & NSOGC_MASK_Y) b0 |= 0x01;
+    if (s1 & NSOGC_MASK_CAPTURE) b1 |= 0x20;
+    if (s1 & NSOGC_MASK_HOME)    b1 |= 0x10;
+    if (s1 & NSOGC_MASK_PLUS)    b1 |= 0x02;
+    if (s1 & NSOGC_MASK_MINUS)   b1 |= 0x01;
+    if (in->extra & NSOGC_EXTRA_C) b1 |= 0x40;
+    if ((s2 & NSOGC_MASK_ZL) || (in->gc_extra & NSOGC_NATIVE_ZL)) b2 |= 0x80;
+    if (s2 & NSOGC_MASK_DPAD_LEFT)  b2 |= 0x08;
+    if (s2 & NSOGC_MASK_DPAD_RIGHT) b2 |= 0x04;
+    if (s2 & NSOGC_MASK_DPAD_UP)    b2 |= 0x02;
+    if (s2 & NSOGC_MASK_DPAD_DOWN)  b2 |= 0x01;
+    out[0x4] = b0;
+    out[0x5] = b1;
+    out[0x6] = b2;
+    // byte 0x7 (GL/GR in Pro2's layout): left 0 -- no GC hardware equivalent.
+
+    memcpy(&out[0x0A], in->left_stick, 3);
+    memcpy(&out[0x0D], in->right_stick, 3);
+
+    out[0x1F] = 0xA0;  // battery voltage ~4000 mV (0x0FA0 LE) -- same safe default as Pro2's
+    out[0x20] = 0x0F;
+    out[0x21] = 0x20;  // charge state
+    out[0x29] = 0x01;  // always 0x01, per documented layout
+
+    // GC-specific tail (Confirmed, protocol.md "Input Report 0x05"): continuous analog L/R
+    // trigger, raw passthrough, never thresholded -- same source fields as report 0x0A's tail.
+    out[0x3C] = in->left_trigger;
+    out[0x3D] = in->right_trigger;
+    out[0x3E] = 0;  // reserved
+    // 0x2A..0x3B (motion block): left zeroed -- GC has no motion source in this project yet.
+}

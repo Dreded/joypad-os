@@ -32,6 +32,10 @@
 #include "descriptors/xac_descriptors.h"
 #include "descriptors/kbmouse_descriptors.h"
 #include "descriptors/gc_adapter_descriptors.h"
+#ifdef CONFIG_SWITCH2_GC
+#include "modes/switch2_gc/joypad_gc_transport.h"
+#include "modes/switch2_gc/switch_gc.h"
+#endif
 #if CFG_TUD_VENDOR && defined(CONFIG_JOYBUS_BRIDGE)
 #include "descriptors/gba_link_descriptors.h"
 #endif
@@ -126,6 +130,7 @@ static const char* mode_names[] = {
     [USB_OUTPUT_MODE_XBONE] = "Xbox One",
     [USB_OUTPUT_MODE_XAC] = "XAC Compat",
     [USB_OUTPUT_MODE_KEYBOARD_MOUSE] = "KB/Mouse",
+    [USB_OUTPUT_MODE_SWITCH2_GC] = "Switch 2 NSO GC",
     [USB_OUTPUT_MODE_GC_ADAPTER] = "GC Adapter",
     [USB_OUTPUT_MODE_PCEMINI] = "PCE Mini",
     [USB_OUTPUT_MODE_CDC] = "CDC Config",
@@ -146,6 +151,10 @@ static const usbd_mode_t* current_mode = NULL;
 
 void usbd_register_modes(void)
 {
+#ifdef CONFIG_SWITCH2_GC
+    usbd_modes[USB_OUTPUT_MODE_SWITCH2_GC] = &switch2_gc_mode;
+#endif
+
     // Register all implemented modes
     usbd_modes[USB_OUTPUT_MODE_HID] = &hid_mode;
     usbd_modes[USB_OUTPUT_MODE_SINPUT] = &sinput_mode;
@@ -350,6 +359,9 @@ static void flush_debug_output(void)
 
 bool usbd_set_mode(usb_output_mode_t mode)
 {
+#ifdef USBD_FIXED_MODE
+    if (mode != USBD_FIXED_MODE) return false;
+#endif
     if (mode >= USB_OUTPUT_MODE_COUNT) {
         return false;
     }
@@ -376,6 +388,9 @@ bool usbd_set_mode(usb_output_mode_t mode)
         mode != USB_OUTPUT_MODE_XBONE &&
         mode != USB_OUTPUT_MODE_XAC &&
         mode != USB_OUTPUT_MODE_KEYBOARD_MOUSE &&
+#ifdef CONFIG_SWITCH2_GC
+        mode != USB_OUTPUT_MODE_SWITCH2_GC &&
+#endif
         mode != USB_OUTPUT_MODE_GC_ADAPTER &&
         mode != USB_OUTPUT_MODE_PCEMINI &&
 #if CFG_TUD_VENDOR && defined(CONFIG_JOYBUS_BRIDGE)
@@ -624,6 +639,9 @@ void usbd_init(void)
                 settings->usb_output_mode == USB_OUTPUT_MODE_XBONE ||
                 settings->usb_output_mode == USB_OUTPUT_MODE_XAC ||
                 settings->usb_output_mode == USB_OUTPUT_MODE_KEYBOARD_MOUSE ||
+#ifdef CONFIG_SWITCH2_GC
+                settings->usb_output_mode == USB_OUTPUT_MODE_SWITCH2_GC ||
+#endif
                 settings->usb_output_mode == USB_OUTPUT_MODE_GC_ADAPTER ||
                 settings->usb_output_mode == USB_OUTPUT_MODE_PCEMINI ||
 #if CFG_TUD_VENDOR && defined(CONFIG_JOYBUS_BRIDGE)
@@ -645,6 +663,10 @@ void usbd_init(void)
         printf("[usbd] No valid flash settings, using defaults\n");
     }
 
+#ifdef USBD_FIXED_MODE
+    // Dedicated controller build: saved legacy mode cannot override this target.
+    output_mode = USBD_FIXED_MODE;
+#endif
 #ifdef CONFIG_NGC
     // GameCube config mode: always force CDC-only (ignore flash-saved mode)
     output_mode = USB_OUTPUT_MODE_CDC;
@@ -672,6 +694,10 @@ void usbd_init(void)
 
     // Initialize reports based on mode
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: switch2_gc_mode.init(); break;
+#endif
+
         case USB_OUTPUT_MODE_XBOX_ORIGINAL:
             // XID mode: delegate to mode interface
             if (usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL] && usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL]->init) {
@@ -876,6 +902,14 @@ void usbd_task(void)
     usbd_try_remote_wakeup();
 
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC:
+            // Refresh retained state before streaming, even while HID IN is busy.
+            usbd_send_report(0);
+            switch2_gc_mode.task();
+            break;
+#endif
+
         case USB_OUTPUT_MODE_XBOX_ORIGINAL: {
             // XID mode: delegate to mode interface
             const usbd_mode_t* mode = usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL];
@@ -1480,6 +1514,16 @@ static bool usbd_send_gc_adapter_report(uint8_t player_index)
 bool usbd_send_report(uint8_t player_index)
 {
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: {
+            if (player_index != 0 || !pending_flags[0]) return false;
+            profile_output_t out;
+            uint32_t buttons = apply_usbd_profile_player(&pending_events[0], &out, 0);
+            pending_flags[0] = false;
+            return switch2_gc_mode.send_report(0, &pending_events[0], &out, buttons);
+        }
+#endif
+
         case USB_OUTPUT_MODE_CDC:
             return false;  // CDC-only mode: no HID reports to send
         case USB_OUTPUT_MODE_XBOX_ORIGINAL:
@@ -1525,6 +1569,10 @@ bool usbd_send_report(uint8_t player_index)
 static uint8_t usbd_get_rumble(void)
 {
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: return switch2_gc_mode.get_rumble();
+#endif
+
         case USB_OUTPUT_MODE_XBOX_ORIGINAL: {
             // XID: delegate to mode interface
             const usbd_mode_t* mode = usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL];
@@ -1607,6 +1655,10 @@ static bool usbd_get_feedback(output_feedback_t* fb)
     fb->dirty = false;
 
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: return switch2_gc_mode.get_feedback(fb);
+#endif
+
         case USB_OUTPUT_MODE_XBOX_ORIGINAL: {
             // XID: delegate to mode interface
             const usbd_mode_t* mode = usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL];
@@ -1815,6 +1867,10 @@ static const tusb_desc_device_t desc_device_hid = {
 uint8_t const *tud_descriptor_device_cb(void)
 {
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: return switch_gc_device_descriptor();
+#endif
+
         case USB_OUTPUT_MODE_CDC:
             return (uint8_t const *)&desc_device_cdc;
         case USB_OUTPUT_MODE_SINPUT:
@@ -1987,6 +2043,10 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
     (void)index;
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC: return switch_gc_config_descriptor();
+#endif
+
         case USB_OUTPUT_MODE_CDC:
             // Reset-surviving breadcrumb (BT.TRACE on nRF): when a fast
             // persona-switch reboot leaves the host holding stale state,
@@ -2097,6 +2157,10 @@ enum {
 
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
+#ifdef CONFIG_SWITCH2_GC
+    if (output_mode == USB_OUTPUT_MODE_SWITCH2_GC) return joypad_gc_string_descriptor(index);
+#endif
+
     (void)langid;
 
     // Xbox OG has no string descriptors
@@ -2286,6 +2350,10 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 // HID Callbacks
 uint8_t const *tud_hid_descriptor_report_cb(uint8_t itf)
 {
+#ifdef CONFIG_SWITCH2_GC
+    if (output_mode == USB_OUTPUT_MODE_SWITCH2_GC) return switch_gc_hid_report_descriptor();
+#endif
+
     // SInput and KB/Mouse modes: route by interface (composite device)
     if (output_mode == USB_OUTPUT_MODE_SINPUT ||
         output_mode == USB_OUTPUT_MODE_KEYBOARD_MOUSE) {
@@ -2338,6 +2406,10 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t itf)
 
 uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
 {
+#ifdef CONFIG_SWITCH2_GC
+    if (output_mode == USB_OUTPUT_MODE_SWITCH2_GC) return 0;
+#endif
+
     // SInput/KB/Mouse composite: route by interface
     if ((output_mode == USB_OUTPUT_MODE_SINPUT ||
          output_mode == USB_OUTPUT_MODE_KEYBOARD_MOUSE) &&
@@ -2401,6 +2473,14 @@ __attribute__((weak)) void app_on_console_shutdown(void)
 
 void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize)
 {
+#ifdef CONFIG_SWITCH2_GC
+    if (output_mode == USB_OUTPUT_MODE_SWITCH2_GC) {
+        if (itf == 0 && report_type == HID_REPORT_TYPE_OUTPUT)
+            switch2_gc_mode.handle_output(report_id, buffer, bufsize);
+        return;
+    }
+#endif
+
     // NOTE: no per-call logging here. This runs on every host SET_REPORT, and a
     // host that streams output reports (e.g. macOS/PS5 pushing DualSense LED/haptics)
     // would turn a blocking UART printf into a Core0-starving storm → USB timeouts.
@@ -2505,6 +2585,12 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
 usbd_class_driver_t const* usbd_app_driver_get_cb(uint8_t* driver_count)
 {
     switch (output_mode) {
+#ifdef CONFIG_SWITCH2_GC
+        case USB_OUTPUT_MODE_SWITCH2_GC:
+            *driver_count = 1;
+            return switch2_gc_mode.get_class_driver();
+#endif
+
         case USB_OUTPUT_MODE_XBOX_ORIGINAL: {
             const usbd_mode_t* mode = usbd_modes[USB_OUTPUT_MODE_XBOX_ORIGINAL];
             if (mode && mode->get_class_driver) {
@@ -2554,6 +2640,11 @@ usbd_class_driver_t const* usbd_app_driver_get_cb(uint8_t* driver_count)
 bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage,
                                  tusb_control_request_t const* request)
 {
+#ifdef CONFIG_SWITCH2_GC
+    if (output_mode == USB_OUTPUT_MODE_SWITCH2_GC)
+        return switch_gc_vendor_control_xfer(rhport, stage, request);
+#endif
+
     if (output_mode == USB_OUTPUT_MODE_XBONE) {
         return tud_xbone_vendor_control_xfer_cb(rhport, stage, request);
     }

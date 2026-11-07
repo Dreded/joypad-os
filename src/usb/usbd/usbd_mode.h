@@ -117,6 +117,9 @@ void usbd_register_modes(void);
 // MODE DECLARATIONS
 // ============================================================================
 
+#ifdef CONFIG_SWITCH2_GC
+extern const usbd_mode_t switch2_gc_mode;
+#endif
 extern const usbd_mode_t hid_mode;
 extern const usbd_mode_t sinput_mode;
 #if CFG_TUD_XINPUT

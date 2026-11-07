@@ -35,6 +35,7 @@ typedef enum {
     USB_OUTPUT_MODE_GBA_LINK,           // GBA Link Cable bridge for Dolphin (USB vendor)
     USB_OUTPUT_MODE_DUALSENSE,          // Wired USB DualSense for PC/Steam (DS5Dongle-style); NOT PS5 (see P5General)
     USB_OUTPUT_MODE_PS5,                // PlayStation 5 native via a P5General auth dongle on the USB host
+    USB_OUTPUT_MODE_SWITCH2_GC,         // Native Switch 2 NSO GameCube USB
     USB_OUTPUT_MODE_COUNT
 } usb_output_mode_t;
 

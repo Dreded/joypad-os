@@ -1,5 +1,20 @@
 # Joypad OS
 
+## Switch 2 NSO GameCube fork
+
+This fork adds native Switch 2 NSO GameCube USB output for an RP2040 Pro Micro,
+using an 8BitDo GameCube mod kit and Retro Receiver in XInput mode. Native
+GameCube recognition and gameplay have been confirmed on Switch 2. Windows
+compatibility remains unresolved; use the separate adapter mode for Dolphin.
+
+Menu shortcuts: **Start + Z = ZL / Suspend**, **Start + D-pad Up = Home**,
+**Start + D-pad Down = Minus**. Analog shoulder travel and final clicks remain
+independent. See the [build and testing guide](docs/SWITCH2_NSO_GAMECUBE.md).
+
+Based on [Joypad OS](https://github.com/joypad-ai/joypad-os), with native USB
+protocol code adapted from [PicoSwitch2](https://github.com/notsosaelin/PicoSwitch2).
+Upstream documentation follows below.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo_solid.svg">

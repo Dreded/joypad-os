@@ -1,0 +1,39 @@
+name: Native Switch 2 GameCube
+
+on:
+  push:
+    branches: [feat/switch2-nso-gamecube]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native protocol, mapping and transport checks
+        run: python3 -B -m unittest discover -s tests -p 'test_switch2_gc.py' -v
+
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib ninja-build cmake
+      - name: Configure with the hardware-validated SDK TinyUSB
+        run: cmake -S src -B build -G Ninja -DPICO_BOARD=pico -DPICO_TINYUSB_PATH="$PWD/src/lib/pico-sdk/lib/tinyusb"
+      - name: Build native NSO and legacy adapter firmware
+        run: ninja -C build joypad_usb_promicro_nso_gc joypad_usb_promicro
+      - uses: actions/upload-artifact@v4
+        with:
+          name: promicro-gamecube-firmware
+          path: |
+            build/joypad_usb_promicro_nso_gc.uf2
+            build/joypad_usb_promicro.uf2
+          if-no-files-found: error
