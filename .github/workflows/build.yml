@@ -666,6 +666,9 @@ jobs:
   # src/CMakeLists.txt). That is exactly what shipped: the v2.3.0 assets report
   # 2.2.0 and the v2.4.0 assets report 2.3.0.
   check-version:
+    # Forks use their dedicated firmware workflow; full release builds remain
+    # available explicitly through workflow_dispatch.
+    if: github.repository == 'joypad-ai/joypad-os' || github.event_name == 'workflow_dispatch'
     # Runs on PRs too — the build jobs need its `sha` output. Its only writes
     # (the version bump and its commit) are already gated on workflow_dispatch,
     # so on a PR this is read-only: resolve the SHA, read VERSION, decide

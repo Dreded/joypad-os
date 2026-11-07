@@ -2,7 +2,7 @@ name: Native Switch 2 GameCube
 
 on:
   push:
-    branches: [feat/switch2-nso-gamecube]
+    branches: [main, feat/switch2-nso-gamecube]
   workflow_dispatch:
 
 permissions:

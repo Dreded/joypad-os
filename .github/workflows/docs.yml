@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.repository == 'joypad-ai/joypad-os'
     environment:
       name: github-pages
       url: https://docs.joypad.ai
